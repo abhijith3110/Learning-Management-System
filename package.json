@@ -1,0 +1,20 @@
+{
+  "name": "lms",
+  "version": "1.0.0",
+  "description": "Learning Management System",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "t",
+    "start": "nodemon app.js"
+  },
+  "author": "Abhijith.A",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
