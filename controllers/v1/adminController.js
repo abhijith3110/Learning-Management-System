@@ -70,7 +70,7 @@ export const listAdmins = async (req, res, next) => {
     try {
 
         const admins = await adminModel.find();
-        res.status(200).json({ message: "Data get Successfully", data: admins });
+        res.status(200).json(admins);
 
     } catch (error) {
 
@@ -94,7 +94,7 @@ export const GetOneAdmin = async (req, res, next) => {
 
             if (admin) {
 
-                res.status(200).json({ message: "Data get Successfully", data: admin });
+                res.status(200).json( admin );
 
             } else {
 
@@ -146,14 +146,14 @@ export const updateAdmin = async (req, res, next) => {
                 return ageCalculate
             }
 
-            const AdminData = { first_name, last_name, email, password, gender, dob, phone, status };
+            const adminData = { first_name, last_name, email, password, gender, dob, phone, status };
 
             if (profileImage) {
-                AdminData.profile_image = profileImage;
+                adminData.profile_image = profileImage;
             }
 
             if (req.body.dob) {
-                AdminData.age = calculateAge(dob);
+                adminData.age = calculateAge(dob);
             }
 
 
@@ -169,7 +169,7 @@ export const updateAdmin = async (req, res, next) => {
 
                 const admin = await adminModel.findOneAndUpdate(
                     { _id: id },
-                    { $set: AdminData },
+                    { $set: adminData },
                     { new: true, runValidators: true }
                 );
 

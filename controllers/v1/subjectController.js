@@ -16,7 +16,7 @@ export const createSubject = async ( req, res, next ) => {
         
         const subject = new subjectModel({ subject_name })
         await subject.save()
-        res.status(201).json({ message: "Subject is Added Successfully", data: subject})
+        res.status(201).json({ message: ` ${subject_name} Subject is Added Successfully`})
 
     } catch (error) {
         
@@ -33,7 +33,7 @@ export const listSubjects = async ( req, res, next ) => {
     try {
         
         const subjects = await subjectModel.find()
-        res.status(200).json({ message: "List All subjects Successfully", data: subjects})
+        res.status(200).json(subjects)
 
     } catch (error) {
         
@@ -64,7 +64,7 @@ export const getOneSubject = async (req, res, next) => {
             return next(new httpError("Subject not found", 404));
         }
 
-        res.status(200).json({ message: `${subject.subject_name} subject retrieved successfully`, data: subject });
+        res.status(200).json( subject );
 
     } catch (error) {
 
@@ -96,7 +96,7 @@ export const updateSubject = async ( req, res, next ) => {
             return next(new httpError("Subject not found", 404));
         }
 
-        res.status(200).json({ message: `${subject.subject_name} subject Updated successfully`, data: subject });
+        res.status(200).json({ message: `${subject.subject_name} subject Updated successfully`});
 
     } catch (error) {
         

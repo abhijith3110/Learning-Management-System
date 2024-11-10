@@ -20,7 +20,13 @@ const teacherSchema = new mongoose.Schema (
         
         password: {
             type: String,
-            required: true
+            required: true,
+            validate: {
+                validator: function(val) {
+                    return /^(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{6,}$/.test(val);
+                },
+                message: "Password must be at least 6 characters long and include at least one special character"
+            }
         },
 
         gender: {
@@ -41,7 +47,13 @@ const teacherSchema = new mongoose.Schema (
 
         phone: {
             type: Number,
-            required: true
+            required: true,
+            validate: {
+                validator: function(val) {
+                    return /^\d{10}$/.test(val.toString());
+                },
+                message: "Phone number must be exactly 10 digits."
+            }
         },
 
         status: {
