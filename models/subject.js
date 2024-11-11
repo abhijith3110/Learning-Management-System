@@ -6,6 +6,25 @@ const subjectSchema = new mongoose.Schema(
         subject_name: {
             type: String,
             required: true
+        },
+
+        isDeleted: {
+
+            status: { 
+                type: Boolean ,
+                default:false
+            },
+
+            deleted_by: { 
+                type: mongoose.Schema.Types.ObjectId ,
+                ref: 'admin',
+            },
+
+            deleted_at: {
+                type: Date,
+                default: null
+            },
+
         }
 
     }, {

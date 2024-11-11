@@ -32,7 +32,7 @@ export const listSubjects = async ( req, res, next ) => {
     
     try {
         
-        const subjects = await subjectModel.find()
+        const subjects = await subjectModel.find({ "isDeleted.status": false });
         res.status(200).json(subjects)
 
     } catch (error) {
@@ -110,6 +110,7 @@ export const updateSubject = async ( req, res, next ) => {
 export const deleteSubject = async ( req, res, next ) => {
 
     const { id } = req.params;
+    const admin = req.admin.id
 
     if ( !id ) {
 
@@ -118,7 +119,22 @@ export const deleteSubject = async ( req, res, next ) => {
 
     try {
         
-        const subject = await subjectModel.findOneAndDelete( {_id: id} )
+        const subject = await subjectModel.findOneAndUpdate( 
+
+            {_id: id, "isDeleted.status": false }, 
+
+            { $set: 
+                { 
+                    "isDeleted.status": true, 
+                    "isDeleted.deleted_by":admin, 
+                    "isDeleted.deleted_at": new Date() 
+                },
+
+            },
+
+            {new: true} 
+
+        )
 
         if ( !subject ) {
 
