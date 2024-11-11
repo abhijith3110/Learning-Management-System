@@ -20,9 +20,9 @@ app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/subject', subjectRouter);
 app.use('/api/v1/teacher', teacherRouter);
 app.use('/api/v1/batch', BatchRouter)
-/**app.use('*', routeError);*/
 app.use(notFound)
 app.use(errorHandler)
+/**app.use('*', routeError);*/
 
 const port = process.env.PORT || 8080
 

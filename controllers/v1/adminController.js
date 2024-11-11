@@ -14,6 +14,7 @@ export const loginAdmin = async ( req, res, next ) => {
     try {
         
         const { email, password } = req.body;
+        
         if ( !email || !password ) {
 
             return next(new httpError("Email and password are required", 400));
@@ -29,6 +30,7 @@ export const loginAdmin = async ( req, res, next ) => {
         const isPasswordCorrect = await bcrypt.compare(password,admin.password)
 
         if (!isPasswordCorrect) {
+
             return next(new httpError("Invalid email or password", 401));
         }
 

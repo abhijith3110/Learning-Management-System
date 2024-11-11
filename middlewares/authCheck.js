@@ -4,8 +4,8 @@ import httpError from '../utils/httpError.js';
 const JWT_SECRET = process.env.JWT_SECRET || "2#2!2*2@";
 
 export const adminAuth = (req, res, next) => {
+
     const authHeader = req.headers.authorization;
-    console.log("Auth Header:", authHeader); 
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
 
@@ -16,6 +16,7 @@ export const adminAuth = (req, res, next) => {
     const token = authHeader.split(" ")[1];
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        
         if (err) {
 
             console.log("Token verification failed", err);
