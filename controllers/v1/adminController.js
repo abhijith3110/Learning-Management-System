@@ -1,5 +1,49 @@
+import jwt from "jsonwebtoken"
+import bcrypt from "bcrypt"
 import adminModel from '../../models/admin.js'
 import httpError from '../../utils/httpError.js'
+
+
+const JWT_SECRET = process.env.JWT_SECRET || "2#2!2*2@";
+
+/** LOGIN ADMIN */
+
+
+export const loginAdmin = async ( req, res, next ) => {
+
+    try {
+        
+        const { email, password } = req.body;
+        if ( !email || !password ) {
+
+            return next(new httpError("Email and password are required", 400));
+        }
+
+        const admin = await adminModel.findOne({ email })
+
+        if (!admin) {
+
+            return next(new httpError("Invalid email or password", 401));
+        }
+
+        const isPasswordCorrect = await bcrypt.compare(password,admin.password)
+
+        if (!isPasswordCorrect) {
+            return next(new httpError("Invalid email or password", 401));
+        }
+
+        const token =  jwt.sign( {id: admin._id, role: admin.role }, JWT_SECRET, { expiresIn: "1h" } );
+
+        res.status(200).json({ message: "Login successful", token });
+
+    } catch (error) {
+
+        return next(new httpError("Failed to login. Please try again later", 500));
+
+    }
+
+}
+
 
 /** Create Admin */
 
@@ -7,7 +51,7 @@ export const createAdmin = async (req, res, next) => {
 
     try {
 
-        const { first_name, last_name, email, password, gender, dob, phone, status } = req.body;
+        const { first_name, last_name, email, password, gender, dob, phone, status, role } = req.body;
 
         let profile_image
 
@@ -30,7 +74,7 @@ export const createAdmin = async (req, res, next) => {
         }
 
 
-        if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status) {
+        if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !role) {
             return next(new httpError("All fields are mantatory", 404))
         }
 
@@ -44,7 +88,9 @@ export const createAdmin = async (req, res, next) => {
                 return next(new httpError(errorMessage, 409));
             }
 
-            const adminCreate = new adminModel({ first_name, last_name, email, password, gender, dob, age: calculateAge(dob), phone, status, profile_image })
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            const adminCreate = new adminModel({ first_name, last_name, email, password: hashedPassword, gender, dob, age: calculateAge(dob), phone, status, role, profile_image })
             await adminCreate.save();
             res.status(201).json({ message: `${adminCreate.first_name + " "+ adminCreate.last_name} (Admin) created successfully` });
 
@@ -67,6 +113,7 @@ export const createAdmin = async (req, res, next) => {
 /** list All Admins */
 
 export const listAdmins = async (req, res, next) => {
+
     try {
 
         const admins = await adminModel.find();
@@ -77,6 +124,7 @@ export const listAdmins = async (req, res, next) => {
         return next(new httpError("Failed to get Admin list. Please try again later", 500));
 
     }
+
 }
 
 
@@ -238,3 +286,5 @@ export const deleteAdmin = async ( req, res, next ) => {
         return next( new httpError("Failed to delete Admin. Please try again later", 500) )
     }
 }
+
+

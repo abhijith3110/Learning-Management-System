@@ -5,6 +5,8 @@ import { routeError } from "./utils/routeError.js";
 import adminRouter from "./routes/v1/adminRoutes.js";
 import subjectRouter from "./routes/v1/subjectRoutes.js";
 import teacherRouter from "./routes/v1/teacherRoutes.js";
+import BatchRouter from "./routes/v1/batchRoutes.js";
+import { errorHandler, notFound } from "./middlewares/errorMiddlerware.js";
 
 const app = express();
 
@@ -13,10 +15,14 @@ dotenv.config();
 connectDB();
 
 app.use(express.json());
-app.use('/admin', adminRouter);
-app.use('/sub', subjectRouter);
-app.use('/teacher', teacherRouter);
-app.use('*', routeError);
+
+app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/subject', subjectRouter);
+app.use('/api/v1/teacher', teacherRouter);
+app.use('/api/v1/batch', BatchRouter)
+/**app.use('*', routeError);*/
+app.use(notFound)
+app.use(errorHandler)
 
 const port = process.env.PORT || 8080
 
