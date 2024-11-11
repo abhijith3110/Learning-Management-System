@@ -1,5 +1,5 @@
-import subjectModel from "../../models/subject.js";
-import httpError from "../../utils/httpError.js"
+import subjectModel from "../../../models/subject.js";
+import httpError from "../../../utils/httpError.js"
 
 /** Create Subject */
 

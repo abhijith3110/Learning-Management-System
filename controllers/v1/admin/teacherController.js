@@ -1,11 +1,11 @@
-import teacherModel from "../../models/teacher.js"
-import httpError from "../../utils/httpError.js"
-import subjectModel from "../../models/subject.js";
+import teacherModel from "../../../models/teacher.js"
+import httpError from "../../../utils/httpError.js"
+import subjectModel from "../../../models/subject.js";
 
 
 /** Create Teacher */
 
-export const createTeacher = async (req, res, next) => {
+export const createTeacher = async ( req, res, next ) => {
 
     try {
 
@@ -178,6 +178,8 @@ export const updateTeacher = async (req, res, next) => {
             teacherData.age = calculateAge(dob);
         }
 
+        if (req.body.subject) {
+
             const subjectArray = Array.isArray(subject) ? subject : [subject];
 
             const subjectData = await subjectModel.find({ _id: { $in: subjectArray } });
@@ -186,6 +188,7 @@ export const updateTeacher = async (req, res, next) => {
                 return next(new httpError("One or more subjects not found", 404));
             }
 
+        }
 
         try {
 
@@ -205,7 +208,7 @@ export const updateTeacher = async (req, res, next) => {
 
             if (teacher) {
 
-                res.status(200).json({ message: `${teacher.first_name + " " + teacher.last_name} (Admin) Updated successfully` });
+                res.status(200).json({ message: `${teacher.first_name + " " + teacher.last_name} (Teacher) Updated successfully` });
 
             } else {
 
@@ -219,7 +222,7 @@ export const updateTeacher = async (req, res, next) => {
                 return next(new httpError(errorMessage.join(", "), 400));
             }
 
-            return next(new httpError("Failed to Update Admin. Please try again later", 500));
+            return next(new httpError("Failed to Update teacher. Please try again later", 500));
 
         }
 
@@ -258,6 +261,6 @@ export const deleteTeacher = async ( req, res, next ) => {
         
     } catch (error) {
         
-        return next(new httpError("Failed to Update teacher . Please try again later", 500));
+        return next(new httpError("Failed to delete teacher . Please try again later", 500));
     }
 }

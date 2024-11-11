@@ -19,12 +19,11 @@ export const adminAuth = (req, res, next) => {
         
         if (err) {
 
-            console.log("Token verification failed", err);
             return next(new httpError("Invalid or expired token", 401)); 
         }
 
         req.admin = decoded; 
-        console.log("Token verified successfully, proceeding");
+
         next(); 
 
     });

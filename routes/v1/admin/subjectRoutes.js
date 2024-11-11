@@ -1,13 +1,13 @@
 import express from "express"
-import { createSubject, deleteSubject, getOneSubject, listSubjects, updateSubject } from "../../controllers/v1/subjectController.js";
-import { adminAuth } from "../../middlewares/authCheck.js";
+import { createSubject, deleteSubject, getOneSubject, listSubjects, updateSubject } from "../../../controllers/v1/admin/subjectController.js";
+import { adminAuth } from "../../../middlewares/authCheck.js";
 
 
 const subjectRouter = express.Router();
 
 subjectRouter.use(adminAuth)
 
-subjectRouter.post('/create', createSubject)
+subjectRouter.post('/', createSubject)
 subjectRouter.get('/all', listSubjects)
 subjectRouter.get('/:id', getOneSubject)
 subjectRouter.put('/:id', updateSubject)
