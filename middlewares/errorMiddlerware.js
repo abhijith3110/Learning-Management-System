@@ -12,7 +12,7 @@ const statusCode = err.code ?? 500
 
 res.status(statusCode).json({
 
-        status: statusCode,
+        status: false,
         message: err.message,
     });
 

@@ -93,7 +93,7 @@ export const createAdmin = async (req, res, next) => {
                     return next(new httpError(errorMessage, 409));
                 }
     
-                const hashedPassword = await bcrypt.hash(password, 10);
+                const hashedPassword = bcrypt.hash(password, process.env.SALT_VALUE);
     
                 const adminCreate = new adminModel({ first_name, last_name, email, password: hashedPassword, gender, dob, age: calculateAge(dob), phone, status, role, profile_image })
                 await adminCreate.save();
