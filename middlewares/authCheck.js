@@ -1,31 +1,50 @@
 import jwt from 'jsonwebtoken';
 import httpError from '../utils/httpError.js';
+import adminModel from '../models/admin.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || "2#2!2*2@";
 
-export const adminAuth = (req, res, next) => {
+export const adminAuth = async (req, res, next) => {
 
-    const authHeader = req.headers.authorization;
+    try {
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        const authHeader = req.headers.authorization;
 
-        return next(new httpError("Authentication token required", 401)); 
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
 
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
-        
-        if (err) {
-
-            return next(new httpError("Invalid or expired token", 401)); 
+            return next(new httpError("Authentication token required", 401));
         }
 
-        req.admin = decoded; 
+        const token = authHeader.split(" ")[1];
 
-        next(); 
+        jwt.verify(token, JWT_SECRET, async (err, decoded) => {
 
-    });
+            if (err) {
+
+                return next(new httpError("Invalid or expired token", 401));
+            }
+
+            req.admin = decoded;
+
+            try {
+
+                const validAdmin = await adminModel.findOne({ _id: decoded.id, "isDeleted.status": false, status: "active" });
+
+                if (!validAdmin) {
+                    return next(new httpError("Unauthorized - Admin not found or inactive", 404));
+                }
+
+                next();
+            } catch (dbError) {
+
+                return next(new httpError("Database error during admin validation", 500));
+            }
+
+        });
+
+    } catch (error) {
+
+        return next(new httpError("Server error during authentication", 500));
+    }
     
 };

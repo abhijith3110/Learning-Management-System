@@ -36,14 +36,13 @@ export const loginAdmin = async ( req, res, next ) => {
             return next(new httpError("Invalid email or password", 401));
         }
 
-        const token =  jwt.sign( {id: admin._id, role: admin.role }, JWT_SECRET, { expiresIn: "1h" } );
+        const token =  jwt.sign( {id: admin._id, role: admin.role }, JWT_SECRET, { expiresIn: process.env.JWT_TOKEN_EXPIRY } );
 
         res.status(200).json({ message: "Login successful", token });
 
     } catch (error) {
 
         return next(new httpError("Failed to login. Please try again later", 500));
-
     }
 
 }
@@ -111,8 +110,8 @@ export const createAdmin = async (req, res, next) => {
             }
     
         } catch (error) {
+
             return next(new httpError("Failed to Upload Amdin. Please try again later", 500))
-    
         }
 
     } else {
@@ -164,7 +163,6 @@ export const GetOneAdmin = async (req, res, next) => {
         } else {
 
             return next(new httpError("Admin ID Required", 400));
-
         }
 
     } catch (error) {
@@ -252,7 +250,6 @@ export const updateAdmin = async (req, res, next) => {
                     }
     
                     return next(new httpError("Failed to Update Admin. Please try again later", 500));
-    
                 }
     
             } else {
@@ -269,7 +266,6 @@ export const updateAdmin = async (req, res, next) => {
     } else {
 
         return next( new httpError("Only Super Admin can Update Admins or Super admins", 500) )
-
     }
 
 }
@@ -285,11 +281,6 @@ export const deleteAdmin = async ( req, res, next ) => {
         try {
 
             const { id } = req.params;
-
-            if ( id === req.admin.id ) {
-
-                return next( new httpError("You cannot delete your account yourself.", 400) )
-            }
     
             if (id) {
                 
@@ -301,8 +292,8 @@ export const deleteAdmin = async ( req, res, next ) => {
                         {
                             "isDeleted.status": true, 
                             "isDeleted.deleted_by": admin, 
-                            "isDeleted.deleted_at": new Date()
-                        }
+                            "isDeleted.deleted_at": new Date(),
+                        },
                     },
 
                     {new: true}
@@ -331,6 +322,7 @@ export const deleteAdmin = async ( req, res, next ) => {
 
         return next( new httpError("Only Super Admin can Delete Admins or Super admins", 500) )
     }
+
 }
 
 
