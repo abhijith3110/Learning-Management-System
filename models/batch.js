@@ -16,6 +16,26 @@ const batchSchema = new mongoose.Schema(
             ref: 'teacher',                
             required: true
 
+        },
+
+        isDeleted: {
+
+            status: { 
+                type: Boolean ,
+                default:false
+            },
+
+            deleted_by: { 
+                type: mongoose.Schema.Types.ObjectId ,
+                ref: 'admin',
+                default: null
+            },
+
+            deleted_at: {
+                type: Date,
+                default: null
+            },
+
         }
 
     }, {

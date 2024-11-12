@@ -91,7 +91,8 @@ export const listStudents = async ( req, res, next ) => {
 
     try {
 
-        const students = await studentModel.find().populate('batch');
+        const students = await studentModel.find({ "isDeleted.status": false }).populate('batch');
+            
         res.status(200).json(students)
 
     } catch (error) {
@@ -246,16 +247,31 @@ export const updateStudent = async (req, res, next) => {
 
 export const deleteStudent = async ( req, res, next ) => {
 
+    const { id } = req.params
+    const admin = req.admin.id
+    
+    if ( !id ) {
+        
+        return next(new httpError("Student ID required", 400));
+    }
+    
     try {
 
-        const { id } = req.params
+        const student = await studentModel.findOneAndUpdate( 
 
-        if ( !id ) {
+            {_id: id, "isDeleted.status": false},
+            
+            { $set: 
+                {
+                    "isDeleted.status": true,
+                    "isDeleted.deleted_by": admin,
+                    "isDeleted.deleted_at": new Date()
+                },
 
-            return next(new httpError("Student ID required", 400));
-        }
+            },
 
-        const student = await studentModel.findOneAndDelete( {_id: id} )
+            { new: true }
+         )
 
         if ( !student ) {
 

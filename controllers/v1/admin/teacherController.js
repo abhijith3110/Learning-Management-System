@@ -84,7 +84,7 @@ export const listTeachers = async (req, res, next) => {
 
     try {
 
-        const teachers = await teacherModel.find().populate('subject');
+        const teachers = await teacherModel.find({ "isDeleted.status": false }).populate('subject');
         res.status(200).json(teachers)
 
     } catch (error) {
@@ -240,16 +240,27 @@ export const updateTeacher = async (req, res, next) => {
 
 export const deleteTeacher = async ( req, res, next ) => {
 
+    const { id } = req.params
+    const admin = req.admin.id
+    
+    if ( !id ) {
+        
+        return next(new httpError("Teacher ID required", 400));
+    }
+
     try {
-
-        const { id } = req.params
-
-        if ( !id ) {
-
-            return next(new httpError("Teacher ID required", 400));
-        }
-
-        const teacher = await teacherModel.findOneAndDelete( {_id: id} )
+    
+        const teacher = await teacherModel.findOneAndUpdate( 
+            {_id: id, "isDeleted.status": false},
+            { $set: 
+                {
+                    "isDeleted.status": true,
+                    "isDeleted.deleted_by": admin,
+                    "isDeleted.deleted_at": new Date()
+                },
+            },
+            {new: true} 
+        )
 
         if ( !teacher ) {
 

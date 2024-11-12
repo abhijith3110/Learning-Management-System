@@ -18,6 +18,7 @@ const subjectSchema = new mongoose.Schema(
             deleted_by: { 
                 type: mongoose.Schema.Types.ObjectId ,
                 ref: 'admin',
+                default: null
             },
 
             deleted_at: {

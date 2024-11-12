@@ -54,6 +54,26 @@ const lectureSchema = new mongoose.Schema(
             type: [mongoose.Schema.Types.ObjectId],
             ref:'student',
             required: true
+        },
+
+        isDeleted: {
+
+            status: { 
+                type: Boolean ,
+                default:false
+            },
+
+            deleted_by: { 
+                type: mongoose.Schema.Types.ObjectId ,
+                ref: 'admin',
+                default: null
+            },
+
+            deleted_at: {
+                type: Date,
+                default: null
+            },
+
         }
 
     }, {

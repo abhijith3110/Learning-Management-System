@@ -126,7 +126,7 @@ export const deleteSubject = async ( req, res, next ) => {
             { $set: 
                 { 
                     "isDeleted.status": true, 
-                    "isDeleted.deleted_by":admin, 
+                    "isDeleted.deleted_by": admin, 
                     "isDeleted.deleted_at": new Date() 
                 },
 

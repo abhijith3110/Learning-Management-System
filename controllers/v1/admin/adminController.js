@@ -128,7 +128,7 @@ export const listAdmins = async (req, res, next) => {
 
     try {
 
-        const admins = await adminModel.find();
+        const admins = await adminModel.find({ "isDeleted.status": false });
         res.status(200).json(admins);
 
     } catch (error) {
@@ -285,10 +285,28 @@ export const deleteAdmin = async ( req, res, next ) => {
         try {
 
             const { id } = req.params;
+
+            if ( id === req.admin.id ) {
+
+                return next( new httpError("You cannot delete your account yourself.", 400) )
+            }
     
             if (id) {
                 
-                const admin =  await adminModel.findOneAndDelete( { _id: id } )
+                const admin =  await adminModel.findOneAndUpdate( 
+                    
+                    { _id: id, "isDeleted.status": false },
+                    
+                    { $set: 
+                        {
+                            "isDeleted.status": true, 
+                            "isDeleted.deleted_by": admin, 
+                            "isDeleted.deleted_at": new Date()
+                        }
+                    },
+
+                    {new: true}
+                )
     
                 if (admin) {
     

@@ -56,7 +56,7 @@ export const listBatches = async (req, res, next) => {
 
     try {
 
-        const batches = await batchModel.find().populate('teacher_incharge')
+        const batches = await batchModel.find({ "isDeleted.status": false }).populate('teacher_incharge')
         res.status(200).json(batches)
 
     } catch (error) {
@@ -156,6 +156,7 @@ export const updateBatch = async (req, res, next) => {
 export const deleteBatch = async ( req, res, next ) => {
 
     const { id } = req.params
+    const admin = req.admin.id
 
     if (!id) {
 
@@ -164,7 +165,20 @@ export const deleteBatch = async ( req, res, next ) => {
 
     try {
         
-        const batch = await batchModel.findOneAndDelete({ _id: id })
+        const batch = await batchModel.findOneAndDelete(
+
+            { _id: id, "isDeleted.status": false },
+
+            { $set: 
+                { 
+                    "isDeleted.status": true, 
+                    "isDeleted.deleted_by": admin, 
+                    "isDeleted.deleted_at": new Date()  
+                }
+            },
+
+            {new: true} 
+        )
 
         if (!batch) {
 
