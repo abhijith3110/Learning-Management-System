@@ -24,17 +24,18 @@ export const adminAuth = async (req, res, next) => {
                 return next(new httpError("Invalid or expired token", 401));
             }
 
-            req.admin = decoded;
+            req.user = decoded;
 
             try {
 
-                const validAdmin = await adminModel.findOne({ _id: decoded.id, "isDeleted.status": false, status: "active" });
+                const validAdmin = await adminModel.findOne({ _id: decoded.id, "is_deleted.status": false, status: "active" });
 
                 if (!validAdmin) {
                     return next(new httpError("Unauthorized - Admin not found or inactive", 404));
                 }
 
                 next();
+                
             } catch (dbError) {
 
                 return next(new httpError("Database error during admin validation", 500));

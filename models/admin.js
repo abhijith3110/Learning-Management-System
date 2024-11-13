@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const adminSchema = new mongoose.Schema(
+
     {
 
         first_name: {
@@ -20,13 +21,7 @@ const adminSchema = new mongoose.Schema(
         
         password: {
             type: String,
-            required: true,
-            validate: {
-                validator: function(val) {
-                    return /^(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{6,}$/.test(val);
-                },
-                message: "Password must be at least 6 characters long and include at least one special character"
-            }
+            required: true
         },
 
         gender: {
@@ -47,13 +42,7 @@ const adminSchema = new mongoose.Schema(
 
         phone: {
             type: Number,
-            required: true,
-            validate: {
-                validator: function(val) {
-                    return /^\d{10}$/.test(val.toString());
-                },
-                message: "Phone number must be exactly 10 digits."
-            }
+            required: true
         }, 
 
         role: {
@@ -64,7 +53,7 @@ const adminSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: ['active', 'resigned'],
+            enum: ['active', 'inactive'],
             required: true
         },
 
@@ -73,7 +62,7 @@ const adminSchema = new mongoose.Schema(
             default: null
         },
 
-        isDeleted: {
+        is_deleted: {
 
             status: { 
                 type: Boolean ,
@@ -98,6 +87,7 @@ const adminSchema = new mongoose.Schema(
         timestamps: true
         
     }
+
 )
 
 const adminModel = mongoose.model( 'admin', adminSchema );

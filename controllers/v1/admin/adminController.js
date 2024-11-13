@@ -2,41 +2,49 @@ import jwt from "jsonwebtoken"
 import bcrypt from "bcrypt"
 import adminModel from '../../../models/admin.js'
 import httpError from '../../../utils/httpError.js'
-import {adminRoleObj} from '../../../configs/adminConfig.js'
+import { adminRoleObj } from '../../../configs/adminConfig.js'
 
 
-const JWT_SECRET = process.env.JWT_SECRET || "2#2!2*2@";
+const jwtSecret = process.env.JWT_SECRET || "2#2!2*2@";
 const superadmin = adminRoleObj.SUPERADMIN
 
-/** LOGIN ADMIN */
 
+/** LOGIN ADMIN */
 
 export const loginAdmin = async ( req, res, next ) => {
 
     try {
-        
+
         const { email, password } = req.body;
-        
-        if ( !email || !password ) {
+
+        if (!email || !password) {
 
             return next(new httpError("Email and password are required", 400));
         }
 
-        const admin = await adminModel.findOne({ email })
+        const admin = await adminModel.findOne({ email, "is_deleted.status": false, status: "active" });
 
         if (!admin) {
 
             return next(new httpError("Invalid email or password", 401));
         }
 
-        const isPasswordCorrect = await bcrypt.compare(password,admin.password)
+        const isPasswordCorrect = await bcrypt.compare(password, admin.password)
 
         if (!isPasswordCorrect) {
 
             return next(new httpError("Invalid email or password", 401));
         }
 
-        const token =  jwt.sign( {id: admin._id, role: admin.role }, JWT_SECRET, { expiresIn: process.env.JWT_TOKEN_EXPIRY } );
+        if (!jwtSecret) {
+            return next(new httpError("Server error: Missing JWT secret", 500));
+        }
+
+        const token = jwt.sign(
+            { id: admin._id, role: admin.role },
+            jwtSecret,
+            { expiresIn: process.env.JWT_TOKEN_EXPIRY || '24h' }
+        );
 
         res.status(200).json({ message: "Login successful", token });
 
@@ -50,84 +58,116 @@ export const loginAdmin = async ( req, res, next ) => {
 
 /** Create Admin */
 
-export const createAdmin = async (req, res, next) => {
+export const createAdmin = async ( req, res, next ) => {
 
-    if (superadmin === req.admin.role) {
+    try {
 
-        try {
+        if (req.user.role !== superadmin) {
 
-            const { first_name, last_name, email, password, gender, dob, phone, status, role } = req.body;
-    
-            let profile_image
-    
-            if (req.file && req.file.path) {
-                profile_image = req.file.path.slice(8);
-            }
-    
-            function calculateAge(dob) {
-                const today = new Date()
-                const birthDate = new Date(dob)
-    
-                let ageCalculate = today.getFullYear() - birthDate.getFullYear();
-                const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-                if (monthDiff < 0 || monthDiff === 0 && today.getDate() < birthDate.getDate()) {
-                    ageCalculate--;
-                }
-    
-                return ageCalculate
-            }
-    
-    
-            if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !role) {
-                return next(new httpError("All fields are mantatory", 404))
-            }
-    
-    
-            try {
-    
-                const existingAdmin = await adminModel.findOne({ $or: [{ email }, { phone }] })
-    
-                if (existingAdmin) {
-                    let errorMessage = existingAdmin.email === email ? "An admin with this email already exists" : "An admin with this phone number already exists";
-                    return next(new httpError(errorMessage, 409));
-                }
-    
-                const hashedPassword = bcrypt.hash(password, process.env.SALT_VALUE);
-    
-                const adminCreate = new adminModel({ first_name, last_name, email, password: hashedPassword, gender, dob, age: calculateAge(dob), phone, status, role, profile_image })
-                await adminCreate.save();
-                res.status(201).json({ message: `${adminCreate.first_name + " "+ adminCreate.last_name} (Admin) created successfully` });
-    
-            } catch (error) {
-    
-                if (error.name === 'ValidationError') {
-                    const errorMessage = Object.values(error.errors).map(err => err.message);
-                    return next(new httpError(errorMessage.join(","), 400))
-                }
-    
-                return next(new httpError("Error saving admin data", 500));
-            }
-    
-        } catch (error) {
-
-            return next(new httpError("Failed to Upload Amdin. Please try again later", 500))
+            return next(new httpError("Only Super Admin can Create Admins", 403))
         }
 
-    } else {
+        const { first_name, last_name, email, password, gender, dob, phone, status, role } = req.body;
 
-        return next(new httpError("Only Super Admin can Create Admins", 500))
+        let profile_image
+
+        if (req.file && req.file.path) {
+
+            profile_image = req.file.path.slice(8);
+        }
+
+        function calculateAge(dob) {
+
+            const today = new Date()
+            const birthDate = new Date(dob)
+            let ageCalculate = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+
+            if (monthDiff < 0 || monthDiff === 0 && today.getDate() < birthDate.getDate()) {
+
+                ageCalculate--;
+            }
+
+            return ageCalculate
+
+        }
+
+        if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !role) {
+
+            return next(new httpError("All fields are mantatory", 400))
+        }
+
+        const validatePassword = (password) => {
+
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+            return regex.test(password);
+        };
+
+        if (!validatePassword(password)) {
+
+            return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
+        }
+
+        const validatePhoneNumber = (phone) => {
+
+            return /^\d{10}$/.test(phone?.toString());
+        };
+
+        if (!validatePhoneNumber(phone)) {
+
+            return next(new httpError("Phone number must be exactly 10 digits", 400));
+        }
+
+        const existingAdmin = await adminModel.findOne({ $or: [{ email }, { phone }] })
+
+        if (existingAdmin) {
+
+            return next(new httpError("An admin with this email or this Phone number already exists", 409));
+        }
+
+        const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        const newAdmin = new adminModel({
+            first_name,
+            last_name,
+            email,
+            password: hashedPassword,
+            gender, 
+            dob,
+            age: calculateAge(dob),
+            phone,
+            status,
+            role,
+            profile_image
+        });
+
+        await newAdmin.save();
+
+        res.status(201).json(
+            { message: `${newAdmin.first_name + " " + newAdmin.last_name} (${newAdmin.role}) created successfully` }
+        );
+
+    } catch (error) {
+
+        if (error.name === 'ValidationError') {
+
+            const errorMessage = Object.values(error.errors).map(err => err.message);
+            return next(new httpError(errorMessage.join(","), 400))
+        }
+
+        return next(new httpError("Failed to Upload Amdin. Please try again later", 500))
     }
 
 }
 
 /** list All Admins */
 
-export const listAdmins = async (req, res, next) => {
+export const listAdmins = async ( req, res, next ) => {
 
     try {
 
-        const admins = await adminModel.find({ "isDeleted.status": false });
+        const admins = await adminModel.find({ "is_deleted.status": false });
         res.status(200).json(admins);
 
     } catch (error) {
@@ -141,131 +181,138 @@ export const listAdmins = async (req, res, next) => {
 
 /** Get One Amdin */
 
-export const GetOneAdmin = async (req, res, next) => {
+export const GetOneAdmin = async ( req, res, next ) => {
 
     try {
 
         const { id } = req.params;
 
-        if (id) {
-
-            const admin = await adminModel.findOne({ _id: id });
-
-            if (admin) {
-
-                res.status(200).json( admin );
-
-            } else {
-
-                return next(new httpError("Admin Not Found", 404));
-            }
-
-        } else {
+        if (!id) {
 
             return next(new httpError("Admin ID Required", 400));
         }
 
+        const admin = await adminModel.findOne({ _id: id });
+
+        if (!admin) {
+
+            return next(new httpError("Admin Not Found", 404));
+        }
+
+        res.status(200).json(admin);
+
     } catch (error) {
 
-        return next(new httpError(`Failed to get user with ID ${req.params.id}. Please try again later`, 500))
+        return next(new httpError('Failed to get Admin. Please try again later', 500))
     }
 
 }
 
 /** Update Admin */
 
-export const updateAdmin = async (req, res, next) => {
+export const updateAdmin = async ( req, res, next ) => {
 
-    if (req.admin.role === superadmin) {
+    try {
 
-        try {
+        if (req.user.role !== superadmin) {
 
-            const { id } = req.params;
-    
-            if (id) {
-    
-                const { first_name, last_name, email, password, gender, dob, phone, status } = req.body;
-    
-                let profileImage
-    
-                if (req.file && req.file.path) {
-                    profileImage = req.file.path.slice(8);
-                }
-    
-                function calculateAge(dob) {
-                    const today = new Date()
-                    const birthDate = new Date(dob)
-    
-                    let ageCalculate = today.getFullYear() - birthDate.getFullYear();
-                    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-                    if (monthDiff < 0 || monthDiff === 0 && today.getDate() < birthDate.getDate()) {
-                        ageCalculate--;
-                    }
-    
-                    return ageCalculate
-                }
-    
-                const adminData = { first_name, last_name, email, password, gender, dob, phone, status };
-    
-                if (profileImage) {
-                    adminData.profile_image = profileImage;
-                }
-    
-                if (req.body.dob) {
-                    adminData.age = calculateAge(dob);
-                }
-    
-    
-                try {
-    
-                    const existingAdmin = await adminModel.findOne({ $or: [{ email }, { phone }], _id: { $ne: id }  })
-    
-                    if (existingAdmin) {
-    
-                        let errorMessage = existingAdmin.email === email ? "An admin with this email already exists" : "An admin with this phone number already exists";
-                        return next(new httpError(errorMessage, 409));
-                    }
-    
-                    const admin = await adminModel.findOneAndUpdate(
-                        { _id: id },
-                        { $set: adminData },
-                        { new: true, runValidators: true }
-                    );
-    
-                    if (admin) {
-    
-                        res.status(200).json({ message: `${admin.first_name + " "+ admin.last_name} (Admin) Updated successfully` });
-    
-                    } else {
-    
-                        return next(new httpError("Admin Not found", 404));
-                    }
-    
-                } catch (error) {
-    
-                    if (error.name === 'ValidationError') {
-                        const errorMessage = Object.values(error.errors).map(err => err.message);
-                        return next(new httpError(errorMessage.join(", "), 400));
-                    }
-    
-                    return next(new httpError("Failed to Update Admin. Please try again later", 500));
-                }
-    
-            } else {
-    
-                return next(new httpError("Admin ID Required", 400));
-            }
-    
-        } catch (error) {
-    
-            return next(new httpError('Internal server error', 500))
+            return next(new httpError("Only Super Admin can Update Admins or Super admins", 403))
         }
 
-        
-    } else {
+        const { id } = req.params;
 
-        return next( new httpError("Only Super Admin can Update Admins or Super admins", 500) )
+        if (!id) {
+
+            return next(new httpError("Admin ID Required", 400));
+        }
+
+        const { first_name, last_name, email, password, gender, dob, phone, status, role } = req.body;
+
+        let profileImage
+
+        if (req.file && req.file.path) {
+
+            profileImage = req.file.path.slice(8);
+        }
+
+        function calculateAge(dob) {
+
+            const today = new Date()
+            const birthDate = new Date(dob)
+            let ageCalculate = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+
+            if (monthDiff < 0 || monthDiff === 0 && today.getDate() < birthDate.getDate()) {
+
+                ageCalculate--;
+            }
+
+            return ageCalculate
+        }
+
+        const validatePassword = (password) => {
+
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+            return regex.test(password);
+        };
+
+        if (req.body.password && !validatePassword(password)) {
+
+            return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
+        }
+
+        const validatePhoneNumber = (phone) => {
+
+            return /^\d{10}$/.test(phone?.toString());
+        };
+
+        if (req.body.phone && !validatePhoneNumber(phone)) {
+
+            return next(new httpError("Phone number must be exactly 10 digits", 400));
+        }
+
+        const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+
+        const adminData = { first_name, last_name, email, password, gender, dob, phone, status, role };
+
+        if (profileImage) {
+            adminData.profile_image = profileImage;
+        }
+
+        if (req.body.dob) {
+            adminData.age = calculateAge(dob);
+        }
+
+        if (req.body.password) {
+            adminData.password = hashedPassword;
+        }
+
+        const existingAdmin = await adminModel.findOne({ $or: [{ email }, { phone }], _id: { $ne: id } })
+
+        if (existingAdmin) {
+
+            return next(new httpError('An admin with this email or this Phone Number already exists', 409));
+        }
+
+        const admin = await adminModel.findOneAndUpdate(
+            { _id: id },
+            { $set: adminData },
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({ message: `${admin.first_name + " " + admin.last_name} (${admin.role}) Updated successfully` });
+
+    } catch (error) {
+
+        if (error.name === 'ValidationError') {
+
+            const errorMessage = Object.values(error.errors).map(err => err.message);
+            return next(new httpError(errorMessage.join(", "), 400));
+        }
+
+        return next(new httpError("Failed to Update Admin. Please try again later", 500));
     }
 
 }
@@ -273,56 +320,46 @@ export const updateAdmin = async (req, res, next) => {
 
 /** Delete Admin */
 
+export const deleteAdmin = async (req, res, next) => {
 
-export const deleteAdmin = async ( req, res, next ) => {
+    try {
 
-    if(superadmin === req.admin.role) {
+        if (req.user.role !== superadmin) {
 
-        try {
-
-            const { id } = req.params;
-    
-            if (id) {
-                
-                const admin =  await adminModel.findOneAndUpdate( 
-                    
-                    { _id: id, "isDeleted.status": false },
-                    
-                    { $set: 
-                        {
-                            "isDeleted.status": true, 
-                            "isDeleted.deleted_by": admin, 
-                            "isDeleted.deleted_at": new Date(),
-                        },
-                    },
-
-                    {new: true}
-                )
-    
-                if (admin) {
-    
-                    res.status(200).json({ message: "Admin Deleted Successfully"})
-    
-                } else {
-                    
-                    return next( new httpError("Admin Not Found",404) )
-                }
-                
-            } else {
-                
-                return next( new httpError("Admin ID Required",400) )
-            }
-            
-        } catch (error) {
-            
-            return next( new httpError("Failed to delete Admin. Please try again later", 500) )
+            return next(new httpError("Only Super Admin can delete admins or superadmins", 403));
         }
 
-    } else {
+        const { id } = req.params;
 
-        return next( new httpError("Only Super Admin can Delete Admins or Super admins", 500) )
+        if (!id) {
+
+            return next(new httpError("Admin ID is required", 400));
+        }
+
+        const admin = await adminModel.findOneAndUpdate(
+            { _id: id, "is_deleted.status": false },
+
+            {
+                $set: {
+                    "is_deleted.status": true,
+                    "is_deleted.deleted_by": req.user.id,
+                    "is_deleted.deleted_at": new Date(),
+                },
+            },
+
+            { new: true }
+        );
+
+        if (!admin) {
+
+            return next(new httpError("Admin not found or already deleted", 404));
+        }
+
+        res.status(200).json({ message: "Admin deleted successfully" });
+
+    } catch (error) {
+
+        return next(new httpError("Failed to delete admin. Please try again later", 500));
     }
 
-}
-
-
+};
