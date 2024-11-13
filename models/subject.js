@@ -1,39 +1,49 @@
 import mongoose from 'mongoose'
 
-const subjectSchema = new mongoose.Schema(
-    {
+const subjectSchema = new mongoose.Schema({
 
-        subject_name: {
-            type: String,
-            required: true
+    name: {
+        type: String,
+        required: true
+    },
+
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'admin',
+        required: true
+    },
+
+    updated_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'admin',
+        default: null
+    },
+
+    is_deleted: {
+
+        status: {
+            type: Boolean,
+            default: false
         },
 
-        isDeleted: {
+        deleted_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'admin',
+            default: null
+        },
 
-            status: { 
-                type: Boolean ,
-                default:false
-            },
+        deleted_at: {
+            type: Date,
+            default: null
+        },
 
-            deleted_by: { 
-                type: mongoose.Schema.Types.ObjectId ,
-                ref: 'admin',
-                default: null
-            },
-
-            deleted_at: {
-                type: Date,
-                default: null
-            },
-
-        }
-
-    }, {
-
-        timestamps: true
-        
     }
-)
+
+}, {
+
+    timestamps: true
+
+})
 
 const subjectModel = mongoose.model('subject', subjectSchema)
 

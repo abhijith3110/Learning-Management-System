@@ -302,6 +302,10 @@ export const updateAdmin = async ( req, res, next ) => {
             { new: true, runValidators: true }
         );
 
+        if (!admin) {
+            return next(new httpError("Admin not found", 404));
+        }
+
         res.status(200).json({ message: `${admin.first_name + " " + admin.last_name} (${admin.role}) Updated successfully` });
 
     } catch (error) {
