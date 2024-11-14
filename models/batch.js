@@ -1,24 +1,42 @@
 import mongoose from "mongoose";
 
-const batchSchema = new mongoose.Schema(
-    {
+const batchSchema = new mongoose.Schema({
 
-        batch_name: {
-
+        name: {
             type:String,
             required: true
-
         },
 
-        teacher_incharge: {
-
+        in_charge: {
             type: mongoose.Schema.Types.ObjectId, 
             ref: 'teacher',                
             required: true
-
         },
 
-        isDeleted: {
+        type: {
+            type:String,
+            enum: ['free', 'paid', 'crash course'],
+            required: true
+        },
+
+        status: {
+            type: String,
+            enum: ['draft', 'inprogress', 'completed'],
+            required: true
+        },
+
+        duration: {
+
+            type: {
+
+                from: { type: Date, required: true },
+                to: { type: Date, required: true }
+            },
+
+            required: true
+        },
+
+        is_deleted: {
 
             status: { 
                 type: Boolean ,
@@ -41,9 +59,10 @@ const batchSchema = new mongoose.Schema(
     }, {
 
         timestamps:true
-
     }
 )
+
+
 
 const batchModel = mongoose.model('batch', batchSchema)
 

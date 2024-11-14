@@ -8,42 +8,53 @@ export const createBatch = async (req, res, next) => {
 
     try {
 
-        const { batch_name, teacher_incharge } = req.body
+        const { name, in_charge, type, status, duration } = req.body
 
-        if (!batch_name || !teacher_incharge) {
+        if (!name || !in_charge || !type || !status || !duration) {
 
-            return next(new httpError("All fields are mantatory", 404))
+            return next(new httpError("All fields are mantatory", 400))
         }
 
-        try {
+        const existingBatch = await batchModel.findOne({ name })
 
-            const existingBatch = await batchModel.findOne({ batch_name })
+        if (existingBatch) {
 
-            if (existingBatch) {
-
-                return next(new httpError("This Batch Already exists", 409));
-            }
-
-            const teacherIsExist = await teacherModel.findById(teacher_incharge);
-
-            if (!teacherIsExist) {
-
-                return next(new httpError("Teacher not Found", 404));
-            }
-
-
-            const newBatch = new batchModel({ batch_name, teacher_incharge })
-            await newBatch.save();
-            res.status(201).json({ message: "Batch created Successfully" })
-
-        } catch (error) {
-
-            return next(new httpError("Error saving Batch data", 500));
-
+            return next(new httpError("This Batch Already exists", 409));
         }
+
+        const isTeacherExist = await teacherModel.findById({ _id: in_charge });
+
+        if (!isTeacherExist) {
+
+            return next(new httpError("Teacher not Found", 404));
+        }
+
+        const currentDate = new Date();
+        const twoYearsLater = new Date();
+        twoYearsLater.setFullYear(currentDate.getFullYear() + 2);
+
+        const fromDate = new Date(duration.from);
+        const toDate = new Date(duration.to);
+
+        if (fromDate < currentDate) {
+
+            return next(new httpError("Cannot set a past date to add a course.", 404));
+        }
+
+        if (toDate > twoYearsLater) {
+
+            return next(new httpError("The duration cannot exceed 2 years.", 404));
+        }
+
+        const newBatch = new batchModel({ name, in_charge, type, status, duration })
+        await newBatch.save();
+
+        res.status(201).json({ message: "Batch created Successfully" })
 
     } catch (error) {
 
+        console.log(error);
+        
         return next(new httpError("Failed to Create Batch. Please try again.", 500))
     }
 
@@ -56,13 +67,23 @@ export const listBatches = async (req, res, next) => {
 
     try {
 
-        const batches = await batchModel.find({ "isDeleted.status": false }).populate('teacher_incharge')
+        const batches = await batchModel.find({ "is_deleted.status": false }).populate({
+            path: 'in_charge',
+            select: "-password -is_deleted ",
+            populate: {
+                path: 'subject',
+                select: 'name -_id'
+            }
+        })
+
+        // const batches = await batchModel.find({  "is_deleted.status": false, type: "free", }).explain()
+        // res.status(200).json(batches)
+
         res.status(200).json(batches)
 
     } catch (error) {
 
         return next(new httpError("Failed to List All Batches. Please try again.", 500))
-
     }
 
 }

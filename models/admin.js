@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
 
-const adminSchema = new mongoose.Schema(
-
-    {
+const adminSchema = new mongoose.Schema({
 
         first_name: {
             type: String,
@@ -87,7 +85,7 @@ const adminSchema = new mongoose.Schema(
         timestamps: true
         
     }
-
+    
 )
 
 const adminModel = mongoose.model( 'admin', adminSchema );
