@@ -31,16 +31,15 @@ export const createStudent = async ( req, res, next ) => {
             return ageCalculate
         }
 
-        const generateStudentID = (firstName) => {
-            const firstLetter = firstName.toUpperCase(); 
-            const timestamp = Date.now().toString(36).slice(-5); 
-            const randomString = Math.random().toString(36).substring(2, 8); 
-            return `${firstLetter}${timestamp}${randomString}`;
+        const generateStudentID = (firstName, phone, lastName) => {
+            const firstLetter = firstName.slice(0,2).toUpperCase(); 
+            const lastLetter = lastName.charAt(0).toLowerCase(); 
+            const phoneNo = phone.toString().slice(-3);
+            const randomString = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            return `${firstLetter}${phoneNo}${lastLetter}${randomString}`;
         };
-
-        const studentID = generateStudentID(req.body.first_name);
-
-
+        
+        const studentID = generateStudentID(req.body.first_name, req.body.phone, req.body.last_name);
 
         if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !batch ) {
             return next(new httpError("All fields are mantatory", 404))
@@ -78,7 +77,8 @@ export const createStudent = async ( req, res, next ) => {
 
 
     } catch (error) {
-
+        console.log(error);
+        
         return next(new httpError("Failed to Upload Student Data. Please try again later", 500))
     }
 

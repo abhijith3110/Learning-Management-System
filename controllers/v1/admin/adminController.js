@@ -97,6 +97,13 @@ export const createAdmin = async ( req, res, next ) => {
             return next(new httpError("All fields are mantatory", 400))
         }
 
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        
+        if (!emailRegex.test(email)) {
+
+            return next(new httpError("Invalid email format!", 400));
+        }
+
         const validatePassword = (password) => {
 
             const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
@@ -256,6 +263,13 @@ export const updateAdmin = async ( req, res, next ) => {
             return regex.test(password);
         };
 
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        
+        if (req.body.email  && !emailRegex.test(email)) {
+
+            return next(new httpError("Invalid email format!", 400));
+        }
+
         if (req.body.password && !validatePassword(password)) {
 
             return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
@@ -340,13 +354,20 @@ export const deleteAdmin = async (req, res, next) => {
             return next(new httpError("Admin ID is required", 400));
         }
 
+        const adminID = req.user?.id
+
+        if (!adminID) {
+
+            return next(new httpError("Unauthorized action", 403));
+        }
+
         const admin = await adminModel.findOneAndUpdate(
             { _id: id, "is_deleted.status": false },
 
             {
                 $set: {
                     "is_deleted.status": true,
-                    "is_deleted.deleted_by": req.user.id,
+                    "is_deleted.deleted_by": adminID,
                     "is_deleted.deleted_at": new Date(),
                 },
             },

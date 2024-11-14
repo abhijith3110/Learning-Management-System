@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
 
-const teacherSchema = new mongoose.Schema (
-    {
+const teacherSchema = new mongoose.Schema ({
 
         first_name:{
             type: String,
@@ -21,12 +20,6 @@ const teacherSchema = new mongoose.Schema (
         password: {
             type: String,
             required: true,
-            validate: {
-                validator: function(val) {
-                    return /^(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{6,}$/.test(val);
-                },
-                message: "Password must be at least 6 characters long and include at least one special character"
-            }
         },
 
         gender: {
@@ -48,17 +41,16 @@ const teacherSchema = new mongoose.Schema (
         phone: {
             type: Number,
             required: true,
-            validate: {
-                validator: function(val) {
-                    return /^\d{10}$/.test(val.toString());
-                },
-                message: "Phone number must be exactly 10 digits."
-            }
+        },
+
+        address: {
+            type: String,
+            required: true
         },
 
         status: {
             type: String,
-            enum: ['active', 'resigned'],
+            enum: ['active', 'resigned', 'inactive'],
             required: true
         },
         
@@ -73,7 +65,7 @@ const teacherSchema = new mongoose.Schema (
             default: null
         },
 
-        isDeleted: {
+        is_deleted: {
 
             status: { 
                 type: Boolean ,
@@ -94,6 +86,7 @@ const teacherSchema = new mongoose.Schema (
         }
 
     }, {
+
         timestamps: true
     }
 )

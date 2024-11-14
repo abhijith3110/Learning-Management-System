@@ -8,6 +8,8 @@ import batchRouter from "./routes/v1/admin/batchRoutes.js";
 import { errorHandler, notFound } from "./middlewares/errorMiddlerware.js";
 import studentRouter from "./routes/v1/admin/studentRoutes.js";
 import lectureRouter from "./routes/v1/admin/lectureRoutes.js";
+import { specs } from "./apidocs/swagger.js";
+import swaggerUi from 'swagger-ui-express';
 // import { routeError } from "./utils/routeError.js";
  
 const app = express();
@@ -15,6 +17,8 @@ const app = express();
 dotenv.config();
 
 connectDB();
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.use(express.json());
 
