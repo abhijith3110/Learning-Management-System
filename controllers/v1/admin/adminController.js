@@ -174,13 +174,51 @@ export const listAdmins = async ( req, res, next ) => {
 
     try {
 
-        const admins = await adminModel.find({ "is_deleted.status": false });
-        res.status(200).json(admins);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5
+        const startIndex = (page - 1) * limit
+        const searchQuery = req.query.search || ''
+        const statusFilter = req.query.status || ''
+        const genderFilter = req.query.gender || ''
+
+        const searchRegex = new RegExp(searchQuery, 'i')
+
+        const filter = {
+            "is_deleted.status": false, 
+            $or: [
+                {first_name: {$regex: searchRegex}},
+                {last_name: {$regex: searchRegex}},
+                { email: { $regex: searchRegex }} 
+            ] 
+        };
+
+        if (statusFilter) {
+            filter.status = statusFilter;  
+        }
+        
+        if (genderFilter) {
+            filter.gender = genderFilter;  
+        }
+
+        const total = await adminModel.countDocuments({ "is_deleted.status": false })
+
+        const admins = await adminModel.find(filter) 
+        .select('-password -is_deleted -createdAt -updatedAt -__v')
+        .skip(startIndex).limit(limit)
+        .sort({ createdAt: -1 })
+
+        res.status(200).json({
+            admins,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit), 
+        });
 
     } catch (error) {
-
+        console.log(error);
+        
         return next(new httpError("Failed to get Admin list. Please try again later", 500));
-
     }
 
 }
@@ -199,7 +237,7 @@ export const GetOneAdmin = async ( req, res, next ) => {
             return next(new httpError("Admin ID Required", 400));
         }
 
-        const admin = await adminModel.findOne({ _id: id });
+        const admin = await adminModel.findOne({ _id: id }).select('-password -is_deleted -createdAt -updatedAt -__v');
 
         if (!admin) {
 
