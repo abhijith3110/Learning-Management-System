@@ -77,7 +77,6 @@ export const createStudent = async ( req, res, next ) => {
 
 
     } catch (error) {
-        console.log(error);
         
         return next(new httpError("Failed to Upload Student Data. Please try again later", 500))
     }

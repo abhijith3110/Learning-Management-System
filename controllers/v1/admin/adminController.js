@@ -337,9 +337,6 @@ export const updateAdmin = async (req, res, next) => {
             return next(new httpError("Phone number must be exactly 10 digits", 400));
         }
 
-        const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
         const adminData = { first_name, last_name, email, password, gender, dob, phone, status, role };
 
         if (profileImage) {
@@ -354,6 +351,8 @@ export const updateAdmin = async (req, res, next) => {
 
         if (req.body.password) {
 
+            const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
             adminData.password = hashedPassword;
         }
 

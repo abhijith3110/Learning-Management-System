@@ -5,7 +5,7 @@ import subjectModel from "../../../models/subject.js";
 
 /** Create Teacher */
 
-export const createTeacher = async ( req, res, next ) => {
+export const createTeacher = async (req, res, next) => {
 
     try {
 
@@ -33,7 +33,7 @@ export const createTeacher = async ( req, res, next ) => {
             return ageCalculate
         }
 
-        if (!first_name || !last_name || !email || !password || !address || !gender || !dob || !phone || !status || !subject) {
+        if (! first_name || ! last_name || ! email || ! password || ! address || ! gender || ! dob || ! phone || ! status || ! subject) {
 
             return next(new httpError("All fields are mantatory", 400))
         }
@@ -59,7 +59,7 @@ export const createTeacher = async ( req, res, next ) => {
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
         
-        if (!emailRegex.test(email)) {
+        if (! emailRegex.test(email)) {
 
             return next(new httpError("Invalid email format!", 400));
         }
@@ -70,7 +70,7 @@ export const createTeacher = async ( req, res, next ) => {
             return regex.test(password);
         };
     
-        if (!validatePassword(password)) {
+        if (! validatePassword(password)) {
     
             return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
         }
@@ -80,7 +80,7 @@ export const createTeacher = async ( req, res, next ) => {
             return /^\d{10}$/.test(phone?.toString());
         };
 
-        if (!validatePhoneNumber(phone)) {
+        if (! validatePhoneNumber(phone)) {
 
             return next(new httpError("Phone number must be exactly 10 digits", 400));
         }
@@ -104,11 +104,18 @@ export const createTeacher = async ( req, res, next ) => {
         })
 
         await newTeacher.save();
-        res.status(201).json({ message: `${newTeacher.first_name + " " + newTeacher.last_name} (Teacher) created successfully` });
+
+        res.status(201).json({ 
+            message: `${newTeacher.first_name + " " + newTeacher.last_name} (Teacher) created successfully`,
+            data: null,
+            status: true,
+            access_token: null
+         });
 
     } catch (error) {
 
         if (error.name === 'ValidationError') {
+
             const errorMessage = Object.values(error.errors).map(err => err.message);
             return next(new httpError(errorMessage.join(","), 400))
         }
@@ -125,13 +132,64 @@ export const listTeachers = async (req, res, next) => {
 
     try {
 
-        const teachers = await teacherModel.find({ "is_deleted.status": false }).populate('subject');
-        res.status(200).json(teachers)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5
+        const startIndex = (page - 1) * limit
+        const searchQuery = req.query.search || ''
+        const statusFilter = req.query.status || ''
+
+        const searchRegex = new RegExp(searchQuery, 'i')
+
+        const filter = {
+            "is_deleted.status": false,
+            $or: [
+                { first_name: { $regex: searchRegex } },
+                { last_name: { $regex: searchRegex } },
+                { email: { $regex: searchRegex } }
+            ]
+        };
+
+        if (statusFilter) {
+
+            filter.status = statusFilter;
+        }
+
+        const total = await teacherModel.countDocuments(filter)
+
+        const teachers = await teacherModel.find(filter)
+             .select('-is_deleted -password')
+             .populate({
+                path: 'subject',
+                select: '-is_deleted',
+                populate: [
+                    {
+                        path: 'created_by',
+                        select: 'first_name last_name email role status profile_image', 
+                    },
+
+                    {
+                        path: 'updated_by',
+                        select: 'first_name last_name email role status profile_image', 
+                    },
+                ],
+            })            
+            .skip(startIndex).limit(limit)
+            .sort({ createdAt: -1 })
+
+        res.status(200).json({ 
+            message: '', 
+            data: teachers, 
+            status: true, 
+            access_token: null,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        })
 
     } catch (error) {
 
         return next(new httpError("Failed to get teachers list. Please try again later", 500));
-
     }
 
 }
@@ -139,25 +197,44 @@ export const listTeachers = async (req, res, next) => {
 
 /** get One teacher */
 
-export const getOneTeacher = async ( req, res, next ) => {
+export const getOneTeacher = async (req, res, next) => {
 
     try {
 
         const { id } = req.params
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Teacher ID required", 400));
         }
 
-        const teacher = await teacherModel.findOne({ _id: id }).populate('subject')
+        const teacher = await teacherModel.findOne({ _id: id }).select('-password -is_deleted').populate({
+            path: 'subject',
+            select:'name created_by updated_by',
+            populate: [
+                {
+                    path: "created_by",
+                    select: 'first_name last_name email role status profile_image'
+                },
 
-        if (!teacher) {
+                {
+                    path: "updated_by",
+                    select: 'first_name last_name email role status profile_image'
+                },
+            ]
+        })
+
+        if (! teacher) {
 
             return next(new httpError("Teacher Not Found", 404));
         }
 
-        res.status(200).json(teacher)
+        res.status(200).json({ 
+            message: '', 
+            data: teacher, 
+            status: true, 
+            access_token: null
+        })
 
     } catch (error) {
 
@@ -175,7 +252,7 @@ export const updateTeacher = async (req, res, next) => {
 
         const { id } = req.params
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Teacher ID required", 400));
         }
@@ -232,7 +309,7 @@ export const updateTeacher = async (req, res, next) => {
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
 
-        if ( req.body.email && !emailRegex.test(email) ) {
+        if ( req.body.email && ! emailRegex.test(email) ) {
 
             return next(new httpError("Invalid email format!", 400));
         }
@@ -243,7 +320,7 @@ export const updateTeacher = async (req, res, next) => {
             return regex.test(password);
         };
 
-        if (req.body.password && !validatePassword(password)) {
+        if (req.body.password && ! validatePassword(password)) {
 
             return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
         }
@@ -253,16 +330,16 @@ export const updateTeacher = async (req, res, next) => {
             return /^\d{10}$/.test(phone?.toString());
         };
 
-        if (req.body.phone && !validatePhoneNumber(phone)) {
+        if (req.body.phone && ! validatePhoneNumber(phone)) {
 
             return next(new httpError("Phone number must be exactly 10 digits", 400));
         }
 
-        const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
+        
         if (req.body.password) {
 
+            const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
             teacherData.password = hashedPassword
         }
 
@@ -281,7 +358,12 @@ export const updateTeacher = async (req, res, next) => {
 
         if (teacher) {
 
-            res.status(200).json({ message: `${teacher.first_name + " " + teacher.last_name} (Teacher) Updated successfully` });
+            res.status(200).json({ 
+                message: `${teacher.first_name + " " + teacher.last_name} (Teacher) Updated successfully`,
+                data: null,
+                status: true,
+                access_token: null
+             });
 
         } else {
 
@@ -291,10 +373,11 @@ export const updateTeacher = async (req, res, next) => {
     } catch (error) {
 
         if (error.name === 'ValidationError') {
+            
             const errorMessage = Object.values(error.errors).map(err => err.message);
             return next(new httpError(errorMessage.join(", "), 400));
         }
-        console.log(error);
+
         return next(new httpError("Failed to Update teacher . Please try again later", 500));
     }
 
@@ -310,12 +393,12 @@ export const deleteTeacher = async ( req, res, next ) => {
         const { id } = req.params
         const admin = req.user?.id
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Teacher ID required", 400));
         }
 
-        if (!admin) {
+        if (! admin) {
 
             return next(new httpError("Unauthorized action", 403));
         }
