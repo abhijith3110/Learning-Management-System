@@ -38,20 +38,47 @@ export const createSubject = async (req, res, next) => {
 
 /** list-all Subjects */
 
-export const listSubjects = async (req, res, next) => {
+export const listSubjects = async ( req, res, next ) => {
 
     try {
 
-        const subjects = await subjectModel.find({ "is_deleted.status": false });
-        res.status(200).json(subjects)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5
+        const startIndex = (page - 1) * limit
+        const searchQuery = req.query.search  || ''
+   
+        const searchRegex = new RegExp(searchQuery, 'i')
+
+        const total = await subjectModel.countDocuments({ 
+            "is_deleted.status": false, 
+            $or: [{name: {$regex: searchRegex}}]
+        })
+
+        const subjects = await subjectModel
+            .find({ 
+                "is_deleted.status": false, 
+                $or: [{name: {$regex: searchRegex}}]
+            })
+            .select('-is_deleted')
+            .populate('created_by', 'first_name last_name role email status') 
+            .populate('updated_by', 'first_name last_name role email status')
+            .skip(startIndex).limit(limit)
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            subjects,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit) 
+        });
 
     } catch (error) {
-
-        return next(new httpError("Failed to get Subjects. Please try again", 500))
-
+        
+        next(new httpError("Failed to get subjects. Please try again", 500));
     }
 
-}
+};
 
 
 /** list One Subject */
@@ -67,7 +94,10 @@ export const getOneSubject = async (req, res, next) => {
             return next(new httpError("Subject ID required", 400));
         }
 
-        const subject = await subjectModel.findOne({ _id: id });
+        const subject = await subjectModel.findOne({ _id: id })
+        .select('-is_deleted')
+        .populate('created_by', 'first_name last_name role email status') 
+        .populate('updated_by', 'first_name last_name role email status');
 
         if (!subject) {
 

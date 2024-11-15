@@ -89,7 +89,6 @@ export const createAdmin = async ( req, res, next ) => {
             }
 
             return ageCalculate
-
         }
 
         if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !role) {
@@ -162,6 +161,7 @@ export const createAdmin = async ( req, res, next ) => {
             const errorMessage = Object.values(error.errors).map(err => err.message);
             return next(new httpError(errorMessage.join(","), 400))
         }
+console.log(error);
 
         return next(new httpError("Failed to Upload Amdin. Please try again later", 500))
     }
@@ -177,7 +177,7 @@ export const listAdmins = async ( req, res, next ) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 5
         const startIndex = (page - 1) * limit
-        const searchQuery = req.query.search || ''
+        const searchQuery = req.query.search  || ''
         const statusFilter = req.query.status || ''
         const genderFilter = req.query.gender || ''
 
@@ -200,10 +200,10 @@ export const listAdmins = async ( req, res, next ) => {
             filter.gender = genderFilter;  
         }
 
-        const total = await adminModel.countDocuments({ "is_deleted.status": false })
+        const total = await adminModel.countDocuments(filter)
 
         const admins = await adminModel.find(filter) 
-        .select('-password -is_deleted -createdAt -updatedAt -__v')
+        .select('-password -is_deleted -__v')
         .skip(startIndex).limit(limit)
         .sort({ createdAt: -1 })
 
@@ -216,8 +216,7 @@ export const listAdmins = async ( req, res, next ) => {
         });
 
     } catch (error) {
-        console.log(error);
-        
+
         return next(new httpError("Failed to get Admin list. Please try again later", 500));
     }
 
