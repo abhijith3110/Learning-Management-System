@@ -5,13 +5,9 @@ import httpError from '../../../utils/httpError.js'
 import { adminRoleObj } from '../../../configs/adminConfig.js'
 
 
-const jwtSecret = process.env.JWT_SECRET || "2#2!2*2@";
-const superadmin = adminRoleObj.SUPERADMIN
-
-
 /** LOGIN ADMIN */
 
-export const loginAdmin = async ( req, res, next ) => {
+export const loginAdmin = async (req, res, next) => {
 
     try {
 
@@ -36,17 +32,25 @@ export const loginAdmin = async ( req, res, next ) => {
             return next(new httpError("Invalid email or password", 401));
         }
 
+        const jwtSecret = process.env.JWT_SECRET;
+
         if (!jwtSecret) {
+
             return next(new httpError("Server error: Missing JWT secret", 500));
         }
 
         const token = jwt.sign(
             { id: admin._id, role: admin.role },
             jwtSecret,
-            { expiresIn: process.env.JWT_TOKEN_EXPIRY || '24h' }
+            { expiresIn: process.env.JWT_TOKEN_EXPIRY }
         );
 
-        res.status(200).json({ message: "Login successful", token });
+        res.status(200).json({
+            message: "Login successful",
+            access_token: token,
+            status: true,
+            data: null
+        });
 
     } catch (error) {
 
@@ -58,9 +62,11 @@ export const loginAdmin = async ( req, res, next ) => {
 
 /** Create Admin */
 
-export const createAdmin = async ( req, res, next ) => {
+export const createAdmin = async (req, res, next) => {
 
     try {
+
+        const superadmin = adminRoleObj.SUPERADMIN
 
         if (req.user.role !== superadmin) {
 
@@ -97,7 +103,7 @@ export const createAdmin = async ( req, res, next ) => {
         }
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-        
+
         if (!emailRegex.test(email)) {
 
             return next(new httpError("Invalid email format!", 400));
@@ -139,7 +145,7 @@ export const createAdmin = async ( req, res, next ) => {
             last_name,
             email,
             password: hashedPassword,
-            gender, 
+            gender,
             dob,
             age: calculateAge(dob),
             phone,
@@ -150,9 +156,12 @@ export const createAdmin = async ( req, res, next ) => {
 
         await newAdmin.save();
 
-        res.status(201).json(
-            { message: `${newAdmin.first_name + " " + newAdmin.last_name} (${newAdmin.role}) created successfully` }
-        );
+        res.status(201).json({
+            message: `${newAdmin.first_name + " " + newAdmin.last_name} (${newAdmin.role}) created successfully`,
+            status: true,
+            data: null,
+            access_token: null
+        });
 
     } catch (error) {
 
@@ -161,7 +170,6 @@ export const createAdmin = async ( req, res, next ) => {
             const errorMessage = Object.values(error.errors).map(err => err.message);
             return next(new httpError(errorMessage.join(","), 400))
         }
-console.log(error);
 
         return next(new httpError("Failed to Upload Amdin. Please try again later", 500))
     }
@@ -170,49 +178,54 @@ console.log(error);
 
 /** list All Admins */
 
-export const listAdmins = async ( req, res, next ) => {
+export const listAdmins = async (req, res, next) => {
 
     try {
 
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 5
         const startIndex = (page - 1) * limit
-        const searchQuery = req.query.search  || ''
+        const searchQuery = req.query.search || ''
         const statusFilter = req.query.status || ''
         const genderFilter = req.query.gender || ''
 
         const searchRegex = new RegExp(searchQuery, 'i')
 
         const filter = {
-            "is_deleted.status": false, 
+            "is_deleted.status": false,
             $or: [
-                {first_name: {$regex: searchRegex}},
-                {last_name: {$regex: searchRegex}},
-                { email: { $regex: searchRegex }} 
-            ] 
+                { first_name: { $regex: searchRegex } },
+                { last_name: { $regex: searchRegex } },
+                { email: { $regex: searchRegex } }
+            ]
         };
 
         if (statusFilter) {
-            filter.status = statusFilter;  
+
+            filter.status = statusFilter;
         }
-        
+
         if (genderFilter) {
-            filter.gender = genderFilter;  
+
+            filter.gender = genderFilter;
         }
 
         const total = await adminModel.countDocuments(filter)
 
-        const admins = await adminModel.find(filter) 
-        .select('-password -is_deleted -__v')
-        .skip(startIndex).limit(limit)
-        .sort({ createdAt: -1 })
+        const admins = await adminModel.find(filter)
+            .select('-password -is_deleted -__v')
+            .skip(startIndex).limit(limit)
+            .sort({ createdAt: -1 })
 
         res.status(200).json({
-            admins,
+            message: '',
+            status: true,
+            access_token: null,
+            data: admins,
             page,
             limit,
             total,
-            totalPages: Math.ceil(total / limit), 
+            totalPages: Math.ceil(total / limit),
         });
 
     } catch (error) {
@@ -225,7 +238,7 @@ export const listAdmins = async ( req, res, next ) => {
 
 /** Get One Amdin */
 
-export const GetOneAdmin = async ( req, res, next ) => {
+export const GetOneAdmin = async (req, res, next) => {
 
     try {
 
@@ -243,7 +256,7 @@ export const GetOneAdmin = async ( req, res, next ) => {
             return next(new httpError("Admin Not Found", 404));
         }
 
-        res.status(200).json(admin);
+        res.status(200).json({ message: '', data: admin, status: true, access_token: null });
 
     } catch (error) {
 
@@ -254,9 +267,11 @@ export const GetOneAdmin = async ( req, res, next ) => {
 
 /** Update Admin */
 
-export const updateAdmin = async ( req, res, next ) => {
+export const updateAdmin = async (req, res, next) => {
 
     try {
+
+        const superadmin = adminRoleObj.SUPERADMIN
 
         if (req.user.role !== superadmin) {
 
@@ -265,7 +280,7 @@ export const updateAdmin = async ( req, res, next ) => {
 
         const { id } = req.params;
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Admin ID Required", 400));
         }
@@ -301,13 +316,13 @@ export const updateAdmin = async ( req, res, next ) => {
         };
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-        
-        if (req.body.email  && !emailRegex.test(email)) {
+
+        if (req.body.email && ! emailRegex.test(email)) {
 
             return next(new httpError("Invalid email format!", 400));
         }
 
-        if (req.body.password && !validatePassword(password)) {
+        if (req.body.password && ! validatePassword(password)) {
 
             return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
         }
@@ -317,7 +332,7 @@ export const updateAdmin = async ( req, res, next ) => {
             return /^\d{10}$/.test(phone?.toString());
         };
 
-        if (req.body.phone && !validatePhoneNumber(phone)) {
+        if (req.body.phone && ! validatePhoneNumber(phone)) {
 
             return next(new httpError("Phone number must be exactly 10 digits", 400));
         }
@@ -325,18 +340,20 @@ export const updateAdmin = async ( req, res, next ) => {
         const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-
         const adminData = { first_name, last_name, email, password, gender, dob, phone, status, role };
 
         if (profileImage) {
+
             adminData.profile_image = profileImage;
         }
 
         if (req.body.dob) {
+
             adminData.age = calculateAge(dob);
         }
 
         if (req.body.password) {
+
             adminData.password = hashedPassword;
         }
 
@@ -353,11 +370,17 @@ export const updateAdmin = async ( req, res, next ) => {
             { new: true, runValidators: true }
         );
 
-        if (!admin) {
+        if (! admin) {
+
             return next(new httpError("Admin not found", 404));
         }
 
-        res.status(200).json({ message: `${admin.first_name + " " + admin.last_name} (${admin.role}) Updated successfully` });
+        res.status(200).json({ 
+            message: `${admin.first_name + " " + admin.last_name} (${admin.role}) Updated successfully`,
+            data: null,
+            status: true,
+            access_token: null
+         });
 
     } catch (error) {
 
@@ -379,6 +402,8 @@ export const deleteAdmin = async (req, res, next) => {
 
     try {
 
+        const superadmin = adminRoleObj.SUPERADMIN;
+
         if (req.user.role !== superadmin) {
 
             return next(new httpError("Only Super Admin can delete admins or superadmins", 403));
@@ -386,14 +411,14 @@ export const deleteAdmin = async (req, res, next) => {
 
         const { id } = req.params;
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Admin ID is required", 400));
         }
 
         const adminID = req.user?.id
 
-        if (!adminID) {
+        if (! adminID) {
 
             return next(new httpError("Unauthorized action", 403));
         }
@@ -412,12 +437,17 @@ export const deleteAdmin = async (req, res, next) => {
             { new: true }
         );
 
-        if (!admin) {
+        if (! admin) {
 
             return next(new httpError("Admin not found or already deleted", 404));
         }
 
-        res.status(200).json({ message: "Admin deleted successfully" });
+        res.status(200).json({ 
+            message: "Admin deleted successfully",
+            data: null,
+            status: true,
+            access_token: null
+         });
 
     } catch (error) {
 

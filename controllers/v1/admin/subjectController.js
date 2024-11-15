@@ -9,7 +9,7 @@ export const createSubject = async (req, res, next) => {
 
         const { name } = req.body;
 
-        if (!name) {
+        if (! name) {
 
             return next(new httpError("Name of the subject is required", 404))
         }
@@ -26,7 +26,12 @@ export const createSubject = async (req, res, next) => {
         const newsubject = new subjectModel({ name, created_by: subjectCreatedBy })
         await newsubject.save()
 
-        res.status(201).json({ message: ` ${newsubject.name} Subject is Added Successfully` })
+        res.status(201).json({ 
+            message: ` ${newsubject.name} Subject is Added Successfully`,
+            data: null,
+            status: true,
+            access_token: null
+         })
 
     } catch (error) {
 
@@ -49,24 +54,27 @@ export const listSubjects = async ( req, res, next ) => {
    
         const searchRegex = new RegExp(searchQuery, 'i')
 
-        const total = await subjectModel.countDocuments({ 
-            "is_deleted.status": false, 
-            $or: [{name: {$regex: searchRegex}}]
+        const total = await subjectModel.countDocuments({
+            "is_deleted.status": false,
+            $or: [{ name: { $regex: searchRegex } }]
         })
 
         const subjects = await subjectModel
-            .find({ 
-                "is_deleted.status": false, 
-                $or: [{name: {$regex: searchRegex}}]
+            .find({
+                "is_deleted.status": false,
+                $or: [{ name: { $regex: searchRegex } }]
             })
             .select('-is_deleted')
-            .populate('created_by', 'first_name last_name role email status profile_image') 
+            .populate('created_by', 'first_name last_name role email status profile_image')
             .populate('updated_by', 'first_name last_name role email status profile_image')
             .skip(startIndex).limit(limit)
             .sort({ createdAt: -1 });
 
         res.status(200).json({
-            subjects,
+            message: '',
+            status: true,
+            data: subjects,
+            access_token: null,
             page,
             limit,
             total,
@@ -89,22 +97,27 @@ export const getOneSubject = async (req, res, next) => {
 
         const { id } = req.params;
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Subject ID required", 400));
         }
 
         const subject = await subjectModel.findOne({ _id: id })
-        .select('-is_deleted')
-        .populate('created_by', 'first_name last_name role email status') 
-        .populate('updated_by', 'first_name last_name role email status');
+            .select('-is_deleted')
+            .populate('created_by', 'first_name last_name role email status')
+            .populate('updated_by', 'first_name last_name role email status');
 
-        if (!subject) {
+        if (! subject) {
 
             return next(new httpError("Subject not found", 404));
         }
 
-        res.status(200).json(subject);
+        res.status(200).json({  
+            message: '', 
+            data: subject, 
+            status: true, 
+            access_token: null
+        });
 
     } catch (error) {
 
@@ -116,7 +129,7 @@ export const getOneSubject = async (req, res, next) => {
 
 /** Update subject */
 
-export const updateSubject = async ( req, res, next ) => {
+export const updateSubject = async (req, res, next) => {
 
     try {
 
@@ -124,17 +137,17 @@ export const updateSubject = async ( req, res, next ) => {
         const { name } = req.body
         const subjectUpdatedBy = req.user?.id
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Subject ID required", 400));
         }
 
-        if (!name) {
+        if (! name) {
 
             return next(new httpError("Subject name is required", 400));
         }
 
-        if (!subjectUpdatedBy) {
+        if (! subjectUpdatedBy) {
 
             return next(new httpError("Unauthorized action", 403));
         }
@@ -152,11 +165,16 @@ export const updateSubject = async ( req, res, next ) => {
             { new: true, runValidators: true }
         )
 
-        if (!subject) {
+        if (! subject) {
             return next(new httpError("Subject not found", 404));
         }
 
-        res.status(200).json({ message: `${subject.name} subject Updated successfully` });
+        res.status(200).json({
+             message: `${subject.name} subject Updated successfully`,
+             data: null,
+             status: true,
+             access_token: null 
+            });
 
     } catch (error) {
 
@@ -175,12 +193,12 @@ export const deleteSubject = async (req, res, next) => {
         const { id } = req.params;
         const admin = req.user?.id
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Subject ID required", 400));
         }
 
-        if (!admin) {
+        if (! admin) {
 
             return next(new httpError("Unauthorized action", 403));
         }
@@ -203,12 +221,17 @@ export const deleteSubject = async (req, res, next) => {
 
         )
 
-        if (!subject) {
+        if (! subject) {
 
             return next(new httpError("Subject not found or already deleted", 404));
         }
 
-        res.status(200).json({ message: `${subject.name} subject deleted successfully` });
+        res.status(200).json({ 
+            message: `${subject.name} subject deleted successfully`,
+            data: null,
+            status: true,
+            access_token: null
+         });
 
     } catch (error) {
 

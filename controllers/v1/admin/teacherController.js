@@ -294,7 +294,7 @@ export const updateTeacher = async (req, res, next) => {
             const errorMessage = Object.values(error.errors).map(err => err.message);
             return next(new httpError(errorMessage.join(", "), 400));
         }
-        
+        console.log(error);
         return next(new httpError("Failed to Update teacher . Please try again later", 500));
     }
 
@@ -337,12 +337,17 @@ export const deleteTeacher = async ( req, res, next ) => {
 
         )
 
-        if (!teacher) {
+        if (! teacher) {
 
             return next(new httpError("Teacher not found or already deleted", 404));
         }
 
-        res.status(200).json({ message: "Teacher Deleted Successfully" })
+        res.status(200).json({ 
+            message: "Teacher Deleted Successfully",
+            data: null,
+            access_token:null,
+            status:true 
+        })
 
     } catch (error) {
 
