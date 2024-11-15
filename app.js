@@ -22,6 +22,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.use(express.json());
 
+app.get('/', ( req,res )=> {
+    res.send('API IS RUNNING')
+})
+
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/subject', subjectRouter);
 app.use('/api/v1/teacher', teacherRouter);

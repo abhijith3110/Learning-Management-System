@@ -27,13 +27,16 @@ const batchSchema = new mongoose.Schema({
 
         duration: {
 
-            type: {
-
-                from: { type: Date, required: true },
-                to: { type: Date, required: true }
+            from: { 
+                type: Date, 
+                required: true 
             },
-
-            required: true
+            
+            to: { 
+                type: Date, 
+                required: true 
+            },
+            
         },
 
         is_deleted: {

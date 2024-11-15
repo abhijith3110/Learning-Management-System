@@ -60,8 +60,8 @@ export const listSubjects = async ( req, res, next ) => {
                 $or: [{name: {$regex: searchRegex}}]
             })
             .select('-is_deleted')
-            .populate('created_by', 'first_name last_name role email status') 
-            .populate('updated_by', 'first_name last_name role email status')
+            .populate('created_by', 'first_name last_name role email status profile_image') 
+            .populate('updated_by', 'first_name last_name role email status profile_image')
             .skip(startIndex).limit(limit)
             .sort({ createdAt: -1 });
 
