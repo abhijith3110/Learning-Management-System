@@ -1,15 +1,15 @@
 import studentModel from "../../../models/student.js"
 import httpError from "../../../utils/httpError.js"
 import batchModel from "../../../models/batch.js";
-
+import bcrypt from 'bcrypt'
 
 /** Create Student */
 
-export const createStudent = async ( req, res, next ) => {
+export const createStudent = async (req, res, next) => {
 
     try {
 
-        const { first_name, last_name, email, password, gender, dob, phone, status, batch } = req.body;
+        const { first_name, last_name, email, password, gender, dob, phone, status, batch, address, parent_number } = req.body;
 
         let profile_image
 
@@ -32,52 +32,106 @@ export const createStudent = async ( req, res, next ) => {
         }
 
         const generateStudentID = (firstName, phone, lastName) => {
-            const firstLetter = firstName.slice(0,2).toUpperCase(); 
-            const lastLetter = lastName.charAt(0).toLowerCase(); 
+            const firstLetter = firstName.slice(0, 2).toUpperCase();
+            const lastLetter = lastName.charAt(0).toLowerCase();
             const phoneNo = phone.toString().slice(-3);
             const randomString = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
             return `${firstLetter}${phoneNo}${lastLetter}${randomString}`;
         };
-        
-        const studentID = generateStudentID(req.body.first_name, req.body.phone, req.body.last_name);
 
-        if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !batch ) {
+        const studentID = generateStudentID(first_name, phone, last_name);
+
+        if (!first_name || !last_name || !email || !password || !gender
+            || !dob || !phone || !status || !batch || !address || !parent_number) {
+
             return next(new httpError("All fields are mantatory", 404))
         }
 
-        try {
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
 
-            const existingStudent = await studentModel.findOne({ $or: [{ email }, { phone }] })
+        if (!emailRegex.test(email)) {
 
-            if (existingStudent) {
-                let errorMessage = existingStudent.email === email ? "A Student with this email already exists" : "A Student with this phone number already exists";
-                return next(new httpError(errorMessage, 409));
+            return next(new httpError("Invalid email format!", 400));
+        }
+
+        const validatePassword = (password) => {
+
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+            return regex.test(password);
+        };
+
+        if (!validatePassword(password)) {
+
+            return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
+        }
+
+        const validatePhoneNumber = (phone, parentPhone) => {
+
+            if (phone === parentPhone) {
+
+                return next(new httpError("Student phone number and parent's phone number cannot be the same", 400));
             }
 
-            const isBatchExists = await batchModel.findById( batch );
+            const phoneValid = /^\d{10}$/.test(phone?.toString());
+            const parentPhoneValid = /^\d{10}$/.test(parentPhone?.toString());
 
-            if (!isBatchExists) {
+            return phoneValid && parentPhoneValid;
+        };
 
-                return next(new httpError("Batch not Found", 404));
-            }
+        if (!validatePhoneNumber(phone, parent_number)) {
 
-            const newStudent = new studentModel({ first_name, last_name, email, password, gender, dob, age: calculateAge(dob), phone, status, profile_image, student_id: studentID, batch })
-            await newStudent.save();
-            res.status(201).json({ message: `${newStudent.first_name + " " + newStudent.last_name} (Student) created successfully` });
+            return next(new httpError("Phone number must be exactly 10 digits", 400));
+        }
 
-        } catch (error) {  
+        const existingStudent = await studentModel.findOne({ $or: [{ email }, { phone }] })
 
-            if (error.name === 'ValidationError') {
-                const errorMessage = Object.values(error.errors).map(err => err.message);
-                return next(new httpError(errorMessage.join(","), 400))
-            }
+        if (existingStudent) {
 
-            return next(new httpError("Error saving Student data", 500));
+            return next(new httpError("A Student with this email or this phone is already exists", 409));
+        }
+
+        const isBatchExists = await batchModel.findOne({ _id: batch, "is_deleted.status": false });
+ 
+        if (! isBatchExists) {
+
+            return next(new httpError("Batch not Found or Batch is deleted ", 404));
         }
 
 
+        const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        const newStudent = new studentModel({
+            first_name,
+            last_name,
+            email,
+            password: hashedPassword,
+            gender,
+            dob,
+            age: calculateAge(dob),
+            phone,
+            status,
+            profile_image,
+            student_id: studentID,
+            batch
+        })
+
+        await newStudent.save();
+        res.status(201).json({
+            message: `${newStudent.first_name + " " + newStudent.last_name} (Student) created successfully`,
+            data: null,
+            status: true,
+            access_token: null
+        });
+
     } catch (error) {
-        
+
+        if (error.name === 'ValidationError') {
+
+            const errorMessage = Object.values(error.errors).map(err => err.message);
+            return next(new httpError(errorMessage.join(","), 400))
+        }
+
         return next(new httpError("Failed to Upload Student Data. Please try again later", 500))
     }
 
@@ -86,15 +140,77 @@ export const createStudent = async ( req, res, next ) => {
 
 /** list all Student */
 
-export const listStudents = async ( req, res, next ) => {
+export const listStudents = async (req, res, next) => {
 
     try {
 
-        const students = await studentModel.find({ "isDeleted.status": false }).populate('batch');
-            
-        res.status(200).json(students)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5
+        const startIndex = (page - 1) * limit
+        const searchQuery = req.query.search || ''
+        const statusFilter = req.query.status || ''
+
+        const searchRegex = new RegExp(searchQuery, 'i')
+
+        const filter = {
+            "is_deleted.status": false,
+            $or: [
+                { first_name: { $regex: searchRegex } },
+                { last_name: { $regex: searchRegex } },
+                { email: { $regex: searchRegex } }
+            ]
+        };
+
+        if (statusFilter) {
+
+            filter.status = statusFilter;
+        }
+
+        const total = await studentModel.countDocuments(filter)
+
+        const students = await studentModel.find(filter)
+            .select('-is_deleted -password')
+            .skip(startIndex).limit(limit)
+            .sort({ createdAt: -1 })
+
+            .populate({
+                path: 'batch',
+                select: '-is_deleted',
+                populate: {
+                    path: 'in_charge',
+                    select: 'first_name last_name email status subject profile_image',
+
+                    populate: {
+                        path: 'subject',
+                        select: 'name created_by updated_by',
+                        populate: [
+                            {
+                                path: 'created_by',
+                                select: 'first_name last_name email status role profile_image',
+                            },
+                            {
+                                path: 'updated_by',
+                                select: 'first_name last_name email status role profile_image',
+                            },
+
+                        ]
+                    }
+                }
+            });
+
+        res.status(200).json({
+            message: '',
+            data: students,
+            status: true,
+            access_token: null,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        })
 
     } catch (error) {
+        console.log(error);
 
         return next(new httpError("Failed to get Students list. Please try again later", 500));
 
@@ -105,7 +221,7 @@ export const listStudents = async ( req, res, next ) => {
 
 /** get One Student */
 
-export const getOneStudent = async ( req, res, next ) => {
+export const getOneStudent = async (req, res, next) => {
 
     try {
 
@@ -114,23 +230,50 @@ export const getOneStudent = async ( req, res, next ) => {
         if (!id) {
 
             return next(new httpError("Student ID required", 400));
-
         }
 
-        const student = await studentModel.findOne({ _id: id }).populate('batch')
+        const student = await studentModel.findOne({ _id: id })
+            .select('-is_deleted -password')
+            .populate({
+                path: 'batch',
+                select: '-is_deleted',
+                populate: {
+                    path: 'in_charge',
+                    select: 'first_name last_name email status subject profile_image',
+
+                    populate: {
+                        path: 'subject',
+                        select: 'name created_by updated_by',
+                        populate: [
+                            {
+                                path: 'created_by',
+                                select: 'first_name last_name email status role profile_image',
+                            },
+                            {
+                                path: 'updated_by',
+                                select: 'first_name last_name email status role profile_image',
+                            },
+
+                        ]
+                    }
+                }
+            });
 
         if (!student) {
 
             return next(new httpError("Student Not Found", 404));
-
         }
 
-        res.status(200).json(student)
+        res.status(200).json({
+            message: '',
+            data: student,
+            status: true,
+            access_token: null
+        })
 
     } catch (error) {
 
         return next(new httpError("Failed to get Student . Please try again later", 500));
-
     }
 
 }
@@ -144,22 +287,23 @@ export const updateStudent = async (req, res, next) => {
 
         const { id } = req.params
 
-        if ( !id ) {
+        if (! id) {
 
             return next(new httpError("Student ID required", 400));
         }
 
-        const { first_name, last_name, email, password, gender, dob, phone, status, batch } = req.body;
+        const {  first_name, last_name, email, password, gender, dob, phone, status, batch, address, parent_number  } = req.body;
 
 
         let profileImage
 
         if (req.file && req.file.path) {
+
             profileImage = req.file.path.slice(8);
         }
 
         function calculateAge(dob) {
-            const today = new Date() 
+            const today = new Date()
             const birthDate = new Date(dob)
 
             let ageCalculate = today.getFullYear() - birthDate.getFullYear();
@@ -173,70 +317,105 @@ export const updateStudent = async (req, res, next) => {
         }
 
 
-        const studentData = { first_name, last_name, email, password, gender, dob, phone, status, batch };
+        const studentData = { first_name, last_name, email, password, gender, dob, phone, status, batch, address, parent_number  };
 
         if (profileImage) {
 
             studentData.profile_image = profileImage;
         }
 
-        if (req.body.dob) {
+        if (dob) {
 
             studentData.age = calculateAge(dob);
         }
 
+        const existingStudent = await studentModel.findOne({ $or: [{ email }, { phone }], _id: { $ne: id } })
 
-        try {
+        if (existingStudent) {
 
-            const existingStudent = await studentModel.findOne({ $or: [{ email }, { phone }] })
-
-            if (existingStudent) {
-                let errorMessage = existingStudent.email === email ? "A Student with this email already exists" : "A Student with this phone number already exists";
-                return next(new httpError(errorMessage, 409));
-            }
-    
-
-            if ( req.body.batch) {
-
-                const isBatchExists = await batchModel.findById( batch );
-    
-                if (!isBatchExists) {
-        
-                    return next(new httpError("Batch not Found", 404));
-                }
-            }
-
-            const student = await studentModel.findOneAndUpdate(
-                { _id: id },
-                { $set: studentData },
-                { new: true, runValidators: true }
-            );
-
-            if (student) {
-
-                res.status(200).json({ message: `${student.first_name + " " + student.last_name} (Student) Updated successfully` });
-
-            } else {
-
-                return next(new httpError("Student Not found", 404));
-            }
-
-        } catch (error) {
-
-            if (error.name === 'ValidationError') {
-                const errorMessage = Object.values(error.errors).map(err => err.message);
-                return next(new httpError(errorMessage.join(", "), 400));
-            }
-
-            return next(new httpError("Failed to Update Student. Please try again later", 500));
-
+            return next(new httpError("A Student with this email or this Phone number is already exists", 409));
         }
 
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+
+        if (email && ! emailRegex.test(email)) {
+
+            return next(new httpError("Invalid email format!", 400));
+        }
+
+        const validatePassword = (password) => {
+
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+            return regex.test(password);
+        };
+
+        if ( password && ! validatePassword(password)) {
+
+            return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
+        }
+
+        const validatePhoneNumber = (phone, parentPhone) => {
+
+            if (phone === parentPhone) {
+
+                return next(new httpError("Student phone number and parent's phone number cannot be the same", 400));
+            }
+
+            const phoneValid = /^\d{10}$/.test(phone?.toString());
+            const parentPhoneValid = /^\d{10}$/.test(parentPhone?.toString());
+
+            return phoneValid && parentPhoneValid;
+        };
+
+        if (phone && ! validatePhoneNumber(phone, parent_number)) {
+
+            return next(new httpError("Phone number must be exactly 10 digits", 400));
+        }
+
+        const isBatchExists = await batchModel.findOne({ _id: batch, "is_deleted.status": false });
+ 
+        if ( batch && ! isBatchExists) {
+
+            return next(new httpError("Batch not Found or Batch is deleted ", 404));
+        }
+
+        if (password) {
+
+            const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
+            const hashedPassword = await bcrypt.hash(password, saltRounds);
+            studentData.password = hashedPassword;
+        }
+
+        const student = await studentModel.findOneAndUpdate(
+            { _id: id },
+            { $set: studentData },
+            { new: true, runValidators: true }
+        );
+
+        if (student) {
+
+            res.status(200).json({ 
+                message: `${student.first_name + " " + student.last_name} (Student) Updated successfully`,
+                data: null,
+                status: true,
+                access_token: null
+             });
+
+        } else {
+
+            return next(new httpError("Student Not found", 404));
+        }
 
     } catch (error) {
 
-        return next(new httpError("Failed to Update Student . Please try again later", 500));
+        if (error.name === 'ValidationError') {
+            const errorMessage = Object.values(error.errors).map(err => err.message);
+            return next(new httpError(errorMessage.join(", "), 400));
+        }
 
+        console.log(error);
+        
+        return next(new httpError("Failed to Update Student . Please try again later", 500));
     }
 
 }
@@ -244,44 +423,54 @@ export const updateStudent = async (req, res, next) => {
 
 // /** Delete Student */
 
-export const deleteStudent = async ( req, res, next ) => {
+export const deleteStudent = async (req, res, next) => {
 
-    const { id } = req.params
-    const admin = req.admin.id
-    
-    if ( !id ) {
-        
-        return next(new httpError("Student ID required", 400));
-    }
-    
     try {
 
-        const student = await studentModel.findOneAndUpdate( 
+        const { id } = req.params
+        const admin = req.admin.id
 
-            {_id: id, "isDeleted.status": false},
-            
-            { $set: 
+        if (!id) {
+
+            return next(new httpError("Student ID required", 400));
+        }
+
+        if (!admin) {
+
+            return next(new httpError("Unauthorized action", 403));
+        }
+
+        const student = await studentModel.findOneAndUpdate(
+
+            { _id: id, "is_deleted.status": false },
+
+            {
+                $set:
                 {
-                    "isDeleted.status": true,
-                    "isDeleted.deleted_by": admin,
-                    "isDeleted.deleted_at": new Date()
+                    "is_deleted.status": true,
+                    "is_deleted.deleted_by": admin,
+                    "is_deleted.deleted_at": new Date()
                 },
 
             },
 
             { new: true }
-         )
+        )
 
-        if ( !student ) {
+        if (!student) {
 
-            return next(new httpError("Student not found", 404));
-
+            return next(new httpError("Admin not found or already deleted", 404));
         }
 
-        res.status(200).json({ message: "Student Deleted Successfully"})
-        
+        res.status(200).json({
+            message: "Student deleted successfully",
+            data: null,
+            status: true,
+            access_token: null
+        });
+
     } catch (error) {
-        
+
         return next(new httpError("Failed to delete Student . Please try again later", 500));
     }
 }

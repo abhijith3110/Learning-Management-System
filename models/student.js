@@ -65,8 +65,18 @@ const studentSchema = new mongoose.Schema (
             type: String,
             default: null
         },
+        
+        address: {
+            type: String,
+            default: null
+        },
 
-        isDeleted: {
+        parent_number: {
+            type: Number,
+            default: null
+        },
+
+        is_deleted: {
 
             status: { 
                 type: Boolean ,

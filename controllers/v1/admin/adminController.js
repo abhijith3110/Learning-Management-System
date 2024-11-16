@@ -13,28 +13,28 @@ export const loginAdmin = async (req, res, next) => {
 
         const { email, password } = req.body;
 
-        if (!email || !password) {
+        if (! email || ! password) {
 
             return next(new httpError("Email and password are required", 400));
         }
 
         const admin = await adminModel.findOne({ email, "is_deleted.status": false, status: "active" });
 
-        if (!admin) {
+        if (! admin) {
 
             return next(new httpError("Invalid email or password", 401));
         }
 
         const isPasswordCorrect = await bcrypt.compare(password, admin.password)
 
-        if (!isPasswordCorrect) {
+        if (! isPasswordCorrect) {
 
             return next(new httpError("Invalid email or password", 401));
         }
 
         const jwtSecret = process.env.JWT_SECRET;
 
-        if (!jwtSecret) {
+        if (! jwtSecret) {
 
             return next(new httpError("Server error: Missing JWT secret", 500));
         }
@@ -97,14 +97,14 @@ export const createAdmin = async (req, res, next) => {
             return ageCalculate
         }
 
-        if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !role) {
+        if (! first_name || ! last_name || ! email || ! password || ! gender || ! dob || ! phone || ! status || ! role) {
 
             return next(new httpError("All fields are mantatory", 400))
         }
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
 
-        if (!emailRegex.test(email)) {
+        if (! emailRegex.test(email)) {
 
             return next(new httpError("Invalid email format!", 400));
         }
@@ -115,7 +115,7 @@ export const createAdmin = async (req, res, next) => {
             return regex.test(password);
         };
 
-        if (!validatePassword(password)) {
+        if (! validatePassword(password)) {
 
             return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
         }
@@ -125,7 +125,7 @@ export const createAdmin = async (req, res, next) => {
             return /^\d{10}$/.test(phone?.toString());
         };
 
-        if (!validatePhoneNumber(phone)) {
+        if (! validatePhoneNumber(phone)) {
 
             return next(new httpError("Phone number must be exactly 10 digits", 400));
         }
@@ -209,7 +209,7 @@ export const listAdmins = async (req, res, next) => {
 
             filter.gender = genderFilter;
         }
-
+        
         const total = await adminModel.countDocuments(filter)
 
         const admins = await adminModel.find(filter)
@@ -244,14 +244,14 @@ export const GetOneAdmin = async (req, res, next) => {
 
         const { id } = req.params;
 
-        if (!id) {
+        if (! id) {
 
             return next(new httpError("Admin ID Required", 400));
         }
 
         const admin = await adminModel.findOne({ _id: id }).select('-password -is_deleted -createdAt -updatedAt -__v');
 
-        if (!admin) {
+        if (! admin) {
 
             return next(new httpError("Admin Not Found", 404));
         }

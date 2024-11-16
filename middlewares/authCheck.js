@@ -2,12 +2,13 @@ import jwt from 'jsonwebtoken';
 import httpError from '../utils/httpError.js';
 import adminModel from '../models/admin.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || "2#2!2*2@";
 
 export const adminAuth = async (req, res, next) => {
-
+    
     try {
-
+        
+        const JWT_SECRET = process.env.JWT_SECRET;
+        
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith("Bearer ")) {

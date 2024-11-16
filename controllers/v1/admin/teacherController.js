@@ -49,7 +49,12 @@ export const createTeacher = async (req, res, next) => {
         const subjectArray = Array.isArray(subject) ? subject : [subject];
 
         // Query the subjects in the database based on the array of subject IDs
-        const subjectData = await subjectModel.find({ _id: { $in: subjectArray } });
+        const subjectData = await subjectModel.find({ 
+            $and: [
+                { _id: { $in: subjectArray } }, 
+                { "is_deleted.status": false }
+            ] 
+        });
 
         // Check if the number of subjects found matches the number provided
         if (subjectData.length !== subjectArray.length) {
@@ -119,7 +124,8 @@ export const createTeacher = async (req, res, next) => {
             const errorMessage = Object.values(error.errors).map(err => err.message);
             return next(new httpError(errorMessage.join(","), 400))
         }
-
+        console.log(error);
+        
         return next(new httpError("Failed to Upload Teacher Data. Please try again later", 500))
     }
 
@@ -298,8 +304,13 @@ export const updateTeacher = async (req, res, next) => {
 
             const subjectArray = Array.isArray(subject) ? subject : [subject];
 
-            const subjectData = await subjectModel.find({ _id: { $in: subjectArray } });
-
+            const subjectData = await subjectModel.find({
+                $and: [
+                    { _id: { $in: subjectArray } },
+                    { "is_deleted.status": false },
+                ],
+            });
+            
             if (subjectData.length !== subjectArray.length) {
 
                 return next(new httpError("One or more subjects not found", 404));

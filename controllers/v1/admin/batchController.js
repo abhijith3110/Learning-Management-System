@@ -22,7 +22,7 @@ export const createBatch = async (req, res, next) => {
             return next(new httpError("This Batch Already exists", 409));
         }
 
-        const isTeacherExist = await teacherModel.findById({ _id: in_charge });
+        const isTeacherExist = await teacherModel.findOne({ _id: in_charge, "is_deleted.status": false  });
 
         if (! isTeacherExist) {
 
@@ -190,7 +190,7 @@ export const updateBatch = async (req, res, next) => {
 
         if (req.body.in_charge) {
 
-            const isTeacherExists = await teacherModel.findOne({ _id: in_charge })
+            const isTeacherExists = await teacherModel.findOne({ _id: in_charge, "is_deleted.status": false })
 
             if (! isTeacherExists) {
 
