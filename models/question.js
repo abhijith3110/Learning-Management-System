@@ -17,50 +17,70 @@ const questionSchema = new mongoose.Schema(
 
         options: {
 
-            A: {
-                type: String,
-                requied: true,
-            },
-
-            B: {
-                type: String,
-                requied: true,
-            },
-
-            C: {
+            a: {
                 type: String,
                 default: null
             },
 
-            D: {
+            b: {
                 type: String,
                 default: null
             },
 
+            c: {
+                type: String,
+                default: null
+            },
+
+            d: {
+                type: String,
+                default: null
+            },
+   
+        },
+        
+        batch: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'batch',
+            required: true
         },
 
         created_by: {
             type: mongoose.Schema.Types.ObjectId,
-            refPath: 'auth_model',
+            ref: 'admin',
             required: true
         },
 
         updated_by: {
             type: mongoose.Schema.Types.ObjectId,
-            refPath: 'auth_model',
-            required: true
-        },
-
-        auth_model: {
-            type: String,
-            enum: ['teacher', 'admin'],
-            required: true,
+            ref: 'admin',
+            default: null
         },
 
         answer: {
             type: [String],
             required: true
         },
+
+        is_deleted: {
+
+            status: { 
+                type: Boolean ,
+                default:false
+            },
+
+            deleted_by: { 
+                type: mongoose.Schema.Types.ObjectId ,
+                ref: 'admin',
+                default: null
+            },
+
+            deleted_at: {
+                type: Date,
+                default: null
+            },
+
+        }
 
     },
 
