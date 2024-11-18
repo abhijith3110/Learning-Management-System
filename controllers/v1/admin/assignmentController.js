@@ -10,7 +10,7 @@ export const createAssignment = async (req, res, next) => {
 
     try {
         
-        const { status, lecture, last_date, questions} = req.body
+        const {status, lecture, last_date, questions} = req.body
 
         if (! status || ! lecture || ! last_date || ! questions) {
 
@@ -69,6 +69,15 @@ export const listAssignment = async (req, res, next) => {
         const assignments = await Assignment.find({ "is_deleted.status": false })
         .select('-is_deleted')
         .populate([
+            
+            {
+                path: 'created_by',
+                select: 'first_name last_name email subject status',
+            },
+            {
+                path: 'updated_by',
+                select: 'first_name last_name email subject status role',
+            },
             {
                 path: 'lecture',
                 select: '-is_deleted',
@@ -103,14 +112,7 @@ export const listAssignment = async (req, res, next) => {
                     },
                 ],
             },
-            {
-                path: 'created_by',
-                select: 'first_name last_name email subject status role',
-            },
-            {
-                path: 'updated_by',
-                select: 'first_name last_name email subject status role',
-            },
+
             {
                 path: 'questions',
                 select: '-is_deleted',
@@ -125,11 +127,33 @@ export const listAssignment = async (req, res, next) => {
         })
 
     } catch (error) {
-  
+        console.log(error);
+        
         return next(new httpError("Failed to List Assignments. Please try again.", 500))
     }
 
 }
+
+/** Get one Assignment */
+
+// export const getOneAssignment = (req, res, next) => {
+
+//     try {
+        
+//         const {id} = req.params
+
+//         if (! id) {
+
+//             return next(new httpError("Assignment ID required", 400))
+//         }
+
+
+
+//     } catch (error) {
+
+//         return next(new httpError("Failed to get assignment. Please try again.", 500))
+//     }
+// }
 
 
 /** Delete Assignment */ 

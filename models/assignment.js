@@ -43,13 +43,13 @@ const assignmentSchema = new mongoose.Schema(
 
         created_by: {
             type: mongoose.Schema.Types.ObjectId,
-            refPath: 'auth_model',
+            ref: 'admin',
             required: true  
         },
 
         updated_by: {
             type: mongoose.Schema.Types.ObjectId,
-            refPath: 'admin',
+            ref: 'admin',
             default: null
         },
 
