@@ -8,18 +8,18 @@ const assignmentSchema = new mongoose.Schema(
             status: {
                 type: String,
                 enum: ['pending', 'completed'],
-                required: true
+                default: null
             },
 
             attachments: {
                 type: [String],
-                required: true
+                default: null
             },
 
             student: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'student',
-                required: true
+                default: null
             }
 
         },
@@ -49,14 +49,8 @@ const assignmentSchema = new mongoose.Schema(
 
         updated_by: {
             type: mongoose.Schema.Types.ObjectId,
-            refPath: 'auth_model',
-            required: true  
-        },
-
-        auth_model: {
-            type: String,
-            enum: ['teacher', 'admin'],
-            required: true,
+            refPath: 'admin',
+            default: null
         },
 
         questions: {
@@ -64,6 +58,26 @@ const assignmentSchema = new mongoose.Schema(
             ref: 'question',
             required: true  
         },
+
+        is_deleted: {
+
+            status: { 
+                type: Boolean ,
+                default:false
+            },
+
+            deleted_by: { 
+                type: mongoose.Schema.Types.ObjectId ,
+                ref: 'admin',
+                default: null
+            },
+
+            deleted_at: {
+                type: Date,
+                default: null
+            },
+
+        }
 
     },
 

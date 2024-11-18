@@ -13,12 +13,12 @@ export const createLecture = async (req, res, next) => {
 
         const { duration, status, subject, teacher, batch, attendees, link, notes } = req.body
 
-        if (!duration || !status || !subject || !teacher || !batch || !attendees) {
+        if (! duration || ! status || ! subject || ! teacher || ! batch || ! attendees) {
 
             return next(new httpError("All fields are Mandatory", 400))
         }
 
-        if (!duration.from || !duration.to) {
+        if (! duration.from || ! duration.to) {
 
             return next(new httpError("Duration with from and to times is required.", 400))
         }
@@ -36,7 +36,7 @@ export const createLecture = async (req, res, next) => {
             fromDate.getMonth() === toDate.getMonth() &&
             fromDate.getDate() === toDate.getDate();
 
-        if (!isSameDay) {
+        if (! isSameDay) {
 
             return next(new httpError("Lecture duration must be on the same day.", 400));
         }
@@ -63,21 +63,21 @@ export const createLecture = async (req, res, next) => {
 
         const isSubject = await subjectModel.findOne({ _id: subject, "is_deleted.status": false })
 
-        if (!isSubject) {
+        if (! isSubject) {
 
             return next(new httpError("Subject not Found", 404))
         }
 
         const isTeacher = await teacherModel.findOne({ _id: teacher, "is_deleted.status": false, subject: isSubject })
 
-        if (!isTeacher) {
+        if (! isTeacher) {
 
             return next(new httpError("Teacher not Found", 404))
         }
 
         const isBatch = await batchModel.findOne({ _id: batch, "is_deleted.status": false })
 
-        if (!isBatch) {
+        if (! isBatch) {
 
             return next(new httpError("Batch not Found", 404))
         }
@@ -105,7 +105,6 @@ export const createLecture = async (req, res, next) => {
         })
 
     } catch (error) {
-        console.log(error);
 
         return next(new httpError("Oops! Somthing went wrong cannot create Lecture", 500))
     }
@@ -440,7 +439,7 @@ export const deleteLecture = async (req, res, next) => {
 
         if (! lecture) {
 
-            return next(new httpError("Batch not found", 404))
+            return next(new httpError("lecture not found", 404))
 
         } else {
 

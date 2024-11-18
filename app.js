@@ -11,6 +11,7 @@ import lectureRouter from "./routes/v1/admin/lectureRoutes.js";
 import { specs } from "./apidocs/swagger.js";
 import swaggerUi from 'swagger-ui-express';
 import QuestionRouter from "./routes/v1/admin/questionRoutes.js";
+import assignmentRouter from "./routes/v1/admin/assignmentRoutes.js";
 // import { routeError } from "./utils/routeError.js";
  
 const app = express();
@@ -34,6 +35,7 @@ app.use('/api/v1/batch', batchRouter)
 app.use('/api/v1/student', studentRouter)
 app.use('/api/v1/lecture', lectureRouter)
 app.use('/api/v1/question', QuestionRouter)
+app.use('/api/v1/assignment', assignmentRouter)
 app.use(notFound)
 app.use(errorHandler)
 /**app.use('*', routeError);*/
