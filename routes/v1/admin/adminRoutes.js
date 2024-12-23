@@ -27,10 +27,10 @@ const adminRouter = express.Router()
  */
 adminRouter.post('/login', loginAdmin)
 
+adminRouter.get('/all', listAdmins);
+adminRouter.post('/', uploadImage.single('file'),createAdmin);
 adminRouter.use(adminAuth)
 
-adminRouter.post('/', uploadImage.single('file'),createAdmin);
-adminRouter.get('/all', listAdmins);
 adminRouter.get('/:id', GetOneAdmin);
 adminRouter.put('/:id', uploadImage.single('file'), updateAdmin);
 

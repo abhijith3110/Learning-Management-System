@@ -63,81 +63,62 @@ export const loginAdmin = async (req, res, next) => {
 /** Create Admin */
 
 export const createAdmin = async (req, res, next) => {
-
     try {
+        const superAdminRole = adminRoleObj.SUPERADMIN;
 
-        const superadmin = adminRoleObj.SUPERADMIN
-
-        if (req.user.role !== superadmin) {
-
-            return next(new httpError("Only Super Admin can Create Admins", 403))
+        if (req.user.role !== superAdminRole) {
+            return next(new httpError("Only Super Admin can create admins", 403));
         }
 
         const { first_name, last_name, email, password, gender, dob, phone, status, role } = req.body;
 
-        let profile_image
-
-        if (req.file && req.file.path) {
-
-            profile_image = req.file.path.slice(8);
+        if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !role) {
+            return next(new httpError("All fields are mandatory", 400));
         }
 
-        function calculateAge(dob) {
+        const profile_image = req.file?.path?.slice(8);
 
-            const today = new Date()
-            const birthDate = new Date(dob)
-            let ageCalculate = today.getFullYear() - birthDate.getFullYear();
+        const calculateAge = (dob) => {
+            const today = new Date();
+            const birthDate = new Date(dob);
+            let age = today.getFullYear() - birthDate.getFullYear();
             const monthDiff = today.getMonth() - birthDate.getMonth();
 
-            if (monthDiff < 0 || monthDiff === 0 && today.getDate() < birthDate.getDate()) {
-
-                ageCalculate--;
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
             }
 
-            return ageCalculate
-        }
-
-        if (! first_name || ! last_name || ! email || ! password || ! gender || ! dob || ! phone || ! status || ! role) {
-
-            return next(new httpError("All fields are mantatory", 400))
-        }
+            return age;
+        };
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-
-        if (! emailRegex.test(email)) {
-
+        if (!emailRegex.test(email)) {
             return next(new httpError("Invalid email format!", 400));
         }
 
         const validatePassword = (password) => {
-
             const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
             return regex.test(password);
         };
 
-        if (! validatePassword(password)) {
-
+        if (!validatePassword(password)) {
             return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
         }
 
         const validatePhoneNumber = (phone) => {
-
             return /^\d{10}$/.test(phone?.toString());
         };
 
-        if (! validatePhoneNumber(phone)) {
-
+        if (!validatePhoneNumber(phone)) {
             return next(new httpError("Phone number must be exactly 10 digits", 400));
         }
 
-        const existingAdmin = await adminModel.findOne({ $or: [{ email }, { phone }] })
-
+        const existingAdmin = await adminModel.findOne({ $or: [{ email }, { phone }] });
         if (existingAdmin) {
-
-            return next(new httpError("An admin with this email or this Phone number already exists", 409));
+            return next(new httpError("An admin with this email or phone number already exists", 409));
         }
 
-        const saltRounds = process.env.SALT_VALUE ? parseInt(process.env.SALT_VALUE) : 10;
+        const saltRounds = parseInt(process.env.SALT_VALUE || "10", 10);
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         const newAdmin = new adminModel({
@@ -157,24 +138,23 @@ export const createAdmin = async (req, res, next) => {
         await newAdmin.save();
 
         res.status(201).json({
-            message: `${newAdmin.first_name + " " + newAdmin.last_name} (${newAdmin.role}) created successfully`,
+            message: `${newAdmin.first_name} ${newAdmin.last_name} (${newAdmin.role}) created successfully`,
             status: true,
             data: null,
             access_token: null
         });
-
+        
     } catch (error) {
-
         if (error.name === 'ValidationError') {
-
-            const errorMessage = Object.values(error.errors).map(err => err.message);
-            return next(new httpError(errorMessage.join(","), 400))
+            const errorMessage = Object.values(error.errors).map(err => err.message).join(", ");
+            return next(new httpError(errorMessage, 400));
         }
 
-        return next(new httpError("Failed to Upload Amdin. Please try again later", 500))
+        console.error(error);
+        return next(new httpError("Failed to create admin. Please try again later", 500));
     }
+};
 
-}
 
 /** list All Admins */
 

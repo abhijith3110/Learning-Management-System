@@ -11,6 +11,7 @@ import lectureRouter from "./routes/v1/admin/lectureRoutes.js";
 import { specs } from "./apidocs/swagger.js";
 import swaggerUi from 'swagger-ui-express';
 import QuestionRouter from "./routes/v1/admin/questionRoutes.js";
+import cors from "cors";
 import assignmentRouter from "./routes/v1/admin/assignmentRoutes.js";
 // import { routeError } from "./utils/routeError.js";
  
@@ -19,6 +20,8 @@ const app = express();
 dotenv.config();
 
 connectDB();
+
+app.use(cors());
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
