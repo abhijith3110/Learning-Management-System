@@ -9,7 +9,7 @@ export const createStudent = async (req, res, next) => {
 
     try {
 
-        const { first_name, last_name, email, password, gender, dob, phone, status, batch, address, parent_number } = req.body;
+        const { first_name, last_name, email, password, gender, dob, phone, batch, address, parent_number, parent_name } = req.body;
 
         let profile_image
 
@@ -42,7 +42,7 @@ export const createStudent = async (req, res, next) => {
         const studentID = generateStudentID(first_name, phone, last_name);
 
         if (!first_name || !last_name || !email || !password || !gender
-            || !dob || !phone || !status || !batch || !address || !parent_number) {
+            || !dob || !phone || !batch || !address || !parent_number || !parent_name) {
 
             return next(new httpError("All fields are mantatory", 404))
         }
@@ -110,10 +110,12 @@ export const createStudent = async (req, res, next) => {
             dob,
             age: calculateAge(dob),
             phone,
-            status,
             profile_image,
             student_id: studentID,
-            batch
+            batch,
+            address,
+            parent_number,
+            parent_name
         })
 
         await newStudent.save();

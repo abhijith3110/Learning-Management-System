@@ -52,8 +52,7 @@ export const loginAdmin = async (req, res, next) => {
             data: null
         });
 
-    } catch (error) {
-
+    } catch (error) {        
         return next(new httpError("Failed to login. Please try again later", 500));
     }
 
@@ -70,26 +69,13 @@ export const createAdmin = async (req, res, next) => {
             return next(new httpError("Only Super Admin can create admins", 403));
         }
 
-        const { first_name, last_name, email, password, gender, dob, phone, status, role } = req.body;
+        const { first_name, last_name, email, password, gender, phone, role } = req.body;
 
-        if (!first_name || !last_name || !email || !password || !gender || !dob || !phone || !status || !role) {
+        if (!first_name || !last_name || !email || !password || !gender || !phone || !role) {
             return next(new httpError("All fields are mandatory", 400));
         }
 
         const profile_image = req.file?.path?.slice(8);
-
-        const calculateAge = (dob) => {
-            const today = new Date();
-            const birthDate = new Date(dob);
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-
-            return age;
-        };
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
         if (!emailRegex.test(email)) {
@@ -127,10 +113,7 @@ export const createAdmin = async (req, res, next) => {
             email,
             password: hashedPassword,
             gender,
-            dob,
-            age: calculateAge(dob),
             phone,
-            status,
             role,
             profile_image
         });

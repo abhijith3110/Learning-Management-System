@@ -9,7 +9,7 @@ export const createTeacher = async (req, res, next) => {
 
     try {
 
-        const { first_name, last_name, email, password, address, gender, dob, phone, status, subject } = req.body;
+        const { first_name, last_name, email, password, address, gender, dob, phone, subject } = req.body;
 
         let profile_image
 
@@ -33,7 +33,7 @@ export const createTeacher = async (req, res, next) => {
             return ageCalculate
         }
 
-        if (! first_name || ! last_name || ! email || ! password || ! address || ! gender || ! dob || ! phone || ! status || ! subject) {
+        if (! first_name || ! last_name || ! email || ! password || ! address || ! gender || ! dob || ! phone || ! subject) {
 
             return next(new httpError("All fields are mantatory", 400))
         }
@@ -103,7 +103,6 @@ export const createTeacher = async (req, res, next) => {
             dob, 
             age: calculateAge(dob), 
             phone, 
-            status, 
             profile_image, 
             subject 
         })

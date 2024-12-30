@@ -46,8 +46,9 @@ const studentSchema = new mongoose.Schema (
 
         status: {
             type: String,
-            enum: ['active', 'resigned'],
-            required: true
+            enum: ['active', 'inactive'],
+            required: true,
+            default: 'active'
         },
         
         student_id: {
@@ -73,6 +74,11 @@ const studentSchema = new mongoose.Schema (
 
         parent_number: {
             type: Number,
+            default: null
+        },
+        
+        parent_name: {
+            type: String,
             default: null
         },
 

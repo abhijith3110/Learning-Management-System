@@ -28,16 +28,6 @@ const adminSchema = new mongoose.Schema({
             required: true
         },
 
-        dob: {
-            type: Date,
-            required: true
-        },
-
-        age: {
-            type: Number, 
-            required: true
-        },
-
         phone: {
             type: Number,
             required: true
@@ -52,6 +42,7 @@ const adminSchema = new mongoose.Schema({
         status: {
             type: String,
             enum: ['active', 'inactive'],
+            default:'active',
             required: true
         },
 
