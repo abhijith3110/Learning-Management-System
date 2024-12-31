@@ -13,6 +13,7 @@ import swaggerUi from 'swagger-ui-express';
 import QuestionRouter from "./routes/v1/admin/questionRoutes.js";
 import cors from "cors";
 import assignmentRouter from "./routes/v1/admin/assignmentRoutes.js";
+import path from 'path'
 // import { routeError } from "./utils/routeError.js";
  
 const app = express();
@@ -21,8 +22,14 @@ dotenv.config();
 
 connectDB();
 
+
+
 app.use(cors());
 
+const __dirname = path.resolve();  
+
+console.log(path.join(__dirname, 'uploads')); 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.use(express.json());

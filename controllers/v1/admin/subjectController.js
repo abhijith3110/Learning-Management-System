@@ -34,7 +34,8 @@ export const createSubject = async (req, res, next) => {
          })
 
     } catch (error) {
-
+        console.log(error);
+        
         return next(new httpError(" Failed to Create Subject. Please try again", 500))
     }
 
