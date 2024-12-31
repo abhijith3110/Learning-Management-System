@@ -368,12 +368,12 @@ export const deleteAdmin = async (req, res, next) => {
 
         if (req.user.role !== superadmin) {
 
-            return next(new httpError("Only Super Admin can delete admins or superadmins", 403));
+            return next(new httpError("Only Super Admin can delete Admins or Super Admins", 403));
         }
 
-        const { id } = req.params;
+        const { ids } = req.body; 
 
-        if (! id) {
+        if (! ids || !Array.isArray(ids) || ids.length === 0) {
 
             return next(new httpError("Admin ID is required", 400));
         }
@@ -385,8 +385,8 @@ export const deleteAdmin = async (req, res, next) => {
             return next(new httpError("Unauthorized action", 403));
         }
 
-        const admin = await adminModel.findOneAndUpdate(
-            { _id: id, "is_deleted.status": false },
+        const admin = await adminModel.updateMany(
+            { _id: {$in: ids}, "is_deleted.status": false },
 
             {
                 $set: {
@@ -399,10 +399,10 @@ export const deleteAdmin = async (req, res, next) => {
             { new: true }
         );
 
-        if (! admin) {
-
-            return next(new httpError("Admin not found or already deleted", 404));
-        }
+        if (admin.matchedCount === 0) {
+            return next(new httpError("No admins found or already deleted", 404));
+          }
+      
 
         res.status(200).json({ 
             message: "Admin deleted successfully",
