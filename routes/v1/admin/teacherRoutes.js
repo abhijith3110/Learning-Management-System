@@ -10,7 +10,7 @@ teacherRouter.use(adminAuth)
 teacherRouter.post('/',uploadImage.single('file'), createTeacher);
 teacherRouter.get('/all', listTeachers);
 teacherRouter.get('/:id', getOneTeacher);
-teacherRouter.delete('/:id', deleteTeacher);
+teacherRouter.delete('/', deleteTeacher);
 teacherRouter.put('/:id',uploadImage.single('file'), updateTeacher);
 
 export default teacherRouter
