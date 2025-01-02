@@ -44,14 +44,14 @@ export const createStudent = async (req, res, next) => {
         if (!first_name || !last_name || !email || !password || !gender
             || !dob || !phone || !batch || !address || !parent_number || !parent_name) {
 
-            return next(new httpError("All fields are mantatory", 404))
+            return next(new httpError("All fields are mantatory", 400))
         }
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
 
         if (!emailRegex.test(email)) {
 
-            return next(new httpError("Invalid email format!", 400));
+            return next(new httpError("Invalid email format", 404));
         }
 
         const validatePassword = (password) => {
@@ -62,14 +62,14 @@ export const createStudent = async (req, res, next) => {
 
         if (!validatePassword(password)) {
 
-            return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
+            return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 404));
         }
 
         const validatePhoneNumber = (phone, parentPhone) => {
 
             if (phone === parentPhone) {
 
-                return next(new httpError("Student phone number and parent's phone number cannot be the same", 400));
+                return next(new httpError("Student phone number and parent's phone number cannot be the same", 404));
             }
 
             const phoneValid = /^\d{10}$/.test(phone?.toString());
@@ -80,21 +80,21 @@ export const createStudent = async (req, res, next) => {
 
         if (!validatePhoneNumber(phone, parent_number)) {
 
-            return next(new httpError("Phone number must be exactly 10 digits", 400));
+            return next(new httpError("Phone number must be exactly 10 digits", 404));
         }
 
         const existingStudent = await studentModel.findOne({ $or: [{ email }, { phone }] })
 
         if (existingStudent) {
 
-            return next(new httpError("A Student with this email or this phone is already exists", 409));
+            return next(new httpError("A Student with this email or this phone is already exists", 404));
         }
 
         const isBatchExists = await batchModel.findOne({ _id: batch, "is_deleted.status": false });
  
         if (! isBatchExists) {
 
-            return next(new httpError("Batch not Found or Batch is deleted ", 404));
+            return next(new httpError("Batch not Found or Batch is deleted ", 400));
         }
 
 
@@ -428,51 +428,50 @@ export const updateStudent = async (req, res, next) => {
 export const deleteStudent = async (req, res, next) => {
 
     try {
-
-        const { id } = req.params
-        const admin = req.admin.id
-
-        if (!id) {
-
-            return next(new httpError("Student ID required", 400));
-        }
-
-        if (!admin) {
-
-            return next(new httpError("Unauthorized action", 403));
-        }
-
-        const student = await studentModel.findOneAndUpdate(
-
-            { _id: id, "is_deleted.status": false },
-
-            {
-                $set:
-                {
-                    "is_deleted.status": true,
-                    "is_deleted.deleted_by": admin,
-                    "is_deleted.deleted_at": new Date()
-                },
-
-            },
-
-            { new: true }
-        )
-
-        if (!student) {
-
-            return next(new httpError("Admin not found or already deleted", 404));
-        }
-
-        res.status(200).json({
-            message: "Student deleted successfully",
-            data: null,
-            status: true,
-            access_token: null
-        });
-
+  
+      const { ids } = req.body;
+  
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+  
+        return next(new httpError("Student ID is required", 400));
+      }
+  
+      const adminID = req.user?.id;
+  
+      if (!adminID) {
+  
+        return next(new httpError("Unauthorized action", 403));
+      }
+  
+      const student = await studentModel.updateMany(
+        { _id: { $in: ids }, "is_deleted.status": false },
+  
+        {
+          $set: {
+            "is_deleted.status": true,
+            "is_deleted.deleted_by": adminID,
+            "is_deleted.deleted_at": new Date(),
+          },
+        },
+  
+        { new: true }
+      );
+  
+      if (student.matchedCount === 0) {
+  
+        return next(new httpError("No student found or already deleted", 404));
+      }
+  
+      res.status(200).json({
+        message: "student deleted successfully",
+        data: null,
+        status: true,
+        access_token: null,
+      });
+  
     } catch (error) {
-
-        return next(new httpError("Failed to delete Student . Please try again later", 500));
+  
+      return next(new httpError("Failed to delete student. Please try again later", 500));
     }
-}
+    
+  };

@@ -66,7 +66,7 @@ export const createAdmin = async (req, res, next) => {
         const superAdminRole = adminRoleObj.SUPERADMIN;
 
         if (req.user.role !== superAdminRole) {
-            return next(new httpError("Only Super Admin can create admins", 403));
+            return next(new httpError("Only Super Admin can create Admins", 404));
         }
 
         const { first_name, last_name, email, password, gender, phone, role } = req.body;
@@ -79,7 +79,7 @@ export const createAdmin = async (req, res, next) => {
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
         if (!emailRegex.test(email)) {
-            return next(new httpError("Invalid email format!", 400));
+            return next(new httpError("Invalid email format", 404));
         }
 
         const validatePassword = (password) => {
@@ -88,7 +88,7 @@ export const createAdmin = async (req, res, next) => {
         };
 
         if (!validatePassword(password)) {
-            return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 400));
+            return next(new httpError("Password must be at least 6 characters long, include at least one uppercase letter, one number, and one special character", 404));
         }
 
         const validatePhoneNumber = (phone) => {
@@ -96,12 +96,12 @@ export const createAdmin = async (req, res, next) => {
         };
 
         if (!validatePhoneNumber(phone)) {
-            return next(new httpError("Phone number must be exactly 10 digits", 400));
+            return next(new httpError("Phone number must be exactly 10 digits", 404));
         }
 
         const existingAdmin = await adminModel.findOne({ $or: [{ email }, { phone }] });
         if (existingAdmin) {
-            return next(new httpError("An admin with this email or phone number already exists", 409));
+            return next(new httpError("An admin with this email or phone number already exists", 404));
         }
 
         const saltRounds = parseInt(process.env.SALT_VALUE || "10", 10);

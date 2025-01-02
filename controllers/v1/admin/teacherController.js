@@ -403,16 +403,20 @@ export const updateTeacher = async (req, res, next) => {
 /** Delete Teacher */
 
 export const deleteTeacher = async (req, res, next) => {
+
   try {
+
     const { ids } = req.body;
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
+
       return next(new httpError("Teacher ID is required", 400));
     }
 
     const adminID = req.user?.id;
 
     if (!adminID) {
+
       return next(new httpError("Unauthorized action", 403));
     }
 
@@ -431,6 +435,7 @@ export const deleteTeacher = async (req, res, next) => {
     );
 
     if (teacher.matchedCount === 0) {
+
       return next(new httpError("No Teacher found or already deleted", 404));
     }
 
@@ -440,9 +445,10 @@ export const deleteTeacher = async (req, res, next) => {
       status: true,
       access_token: null,
     });
+
   } catch (error) {
-    return next(
-      new httpError("Failed to delete Teacher. Please try again later", 500)
-    );
+
+    return next(new httpError("Failed to delete Teacher. Please try again later", 500));
   }
+  
 };
