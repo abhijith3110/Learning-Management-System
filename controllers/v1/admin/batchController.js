@@ -71,41 +71,44 @@ export const createBatch = async (req, res, next) => {
 export const listBatches = async (req, res, next) => {
 
     try {
+     
+        const page = Math.max(1, parseInt(req.query.page) || 1); 
+        const limit = Math.max(1, parseInt(req.query.limit) || 5); 
+        const startIndex = (page - 1) * limit;
 
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 5
-        const startIndex = (page - 1) * limit
-        const searchQuery = req.query.search  || ''
-        const filterStatus = req.query.status  || ''
-        const filterType = req.query.type  || ''
+        const searchQuery = req.query.search || '';
+        const filterStatus = req.query.status || '';
+        const filterType = req.query.type || '';
 
-        const searchRegex = new RegExp(searchQuery, 'i')
+        const searchRegex = new RegExp(searchQuery, 'i');
 
         const filter = {
-            "is_deleted.status": false, 
-            $or: [{name: {$regex: searchRegex}}],
-        }
+            "is_deleted.status": false,
+            $or: [{ name: { $regex: searchRegex } }],
+        };
 
         if (filterStatus) {
-            filter.status = filterStatus;  
-        }
-        
-        if (filterType) {
-            filter.type = filterType;  
+            filter.status = filterStatus;
         }
 
-        const total = await batchModel.countDocuments(filter)
+        if (filterType) {
+            filter.type = filterType;
+        }
+
+        const total = await batchModel.countDocuments(filter);
 
         const batches = await batchModel.find(filter)
-            .select('-is_deleted').populate({
+            .select('-is_deleted')
+            .populate({
                 path: 'in_charge',
-                select: ' first_name last_name email status profile_image',
+                select: 'first_name last_name email status profile_image',
                 populate: {
                     path: 'subject',
-                    select: 'name -_id'
-                }
+                    select: 'name -_id',
+                },
             })
-            .skip(startIndex).limit(limit)
+            .skip(startIndex)
+            .limit(limit)
             .sort({ createdAt: -1 });
 
         res.status(200).json({
@@ -116,15 +119,36 @@ export const listBatches = async (req, res, next) => {
             page,
             limit,
             total,
-            totalPages: Math.ceil(total / limit) 
-        })
+            totalPages: Math.ceil(total / limit),
+        });
 
     } catch (error) {
-
-        return next(new httpError("Failed to List All Batches. Please try again.", 500))
+        
+        return next(new httpError("Failed to List All Batches. Please try again.", 500));
     }
+};
 
-}
+
+/** Name of all batches */
+
+export const listAllBatchesNames = async (req, res, next) => {
+
+  try {
+    const batches = await batchModel.find({"is_deleted.status": false,}).select("name").sort({ createdAt: -1 });
+
+    res.status(200).json({
+      data: batches,
+      message: "",
+      status: true,
+      access_token: null,
+    });
+  } catch (error) {
+    return next(
+      new httpError("Failed to List All Batches. Please try again.", 500)
+    );
+  }
+};
+
 
 /** Get One Batch */
 

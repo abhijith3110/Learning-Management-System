@@ -90,6 +90,30 @@ export const listSubjects = async ( req, res, next ) => {
 };
 
 
+/** List All Subject Names */
+
+
+export const listAllSubjectsNames = async ( req, res, next ) => {
+
+    try {
+
+        const subjects = await subjectModel.find({"is_deleted.status": false,}).select('name').sort({ createdAt: -1 });
+
+        res.status(200).json({
+            message: '',
+            status: true,
+            data: subjects,
+            access_token: null,
+        });
+
+    } catch (error) {
+        console.log(error); 
+        next(new httpError("Failed to get subjects. Please try again", 500));
+    }
+
+};
+
+
 /** list One Subject */
 
 export const getOneSubject = async (req, res, next) => {

@@ -133,7 +133,7 @@ export const createStudent = async (req, res, next) => {
             const errorMessage = Object.values(error.errors).map(err => err.message);
             return next(new httpError(errorMessage.join(","), 400))
         }
-
+        console.log(error);
         return next(new httpError("Failed to Upload Student Data. Please try again later", 500))
     }
 
