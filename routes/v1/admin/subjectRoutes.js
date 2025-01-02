@@ -12,6 +12,6 @@ subjectRouter.get('/names',listAllSubjectsNames)
 subjectRouter.get('/all', listSubjects)
 subjectRouter.get('/:id', getOneSubject)
 subjectRouter.put('/:id', updateSubject)
-subjectRouter.delete('/:id', deleteSubject)
+subjectRouter.delete('/', deleteSubject)
 
 export default subjectRouter 

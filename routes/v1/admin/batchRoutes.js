@@ -10,7 +10,7 @@ batchRouter.get('/names', listAllBatchesNames)
 batchRouter.get('/all', listBatches)
 batchRouter.get('/:id', getOneBatch)
 batchRouter.put('/:id', updateBatch)
-batchRouter.delete('/:id', deleteBatch)
+batchRouter.delete('/', deleteBatch)
 
 export default batchRouter
 

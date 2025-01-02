@@ -215,44 +215,41 @@ export const deleteSubject = async (req, res, next) => {
 
     try {
 
-        const { id } = req.params;
-        const admin = req.user?.id
+        const { ids } = req.body; 
 
-        if (! id) {
+        if (! ids || !Array.isArray(ids) || ids.length === 0) {
 
-            return next(new httpError("Subject ID required", 400));
+            return next(new httpError("Subject ID is required", 400));
         }
 
-        if (! admin) {
+        const adminID = req.user?.id
+
+        if (! adminID) {
 
             return next(new httpError("Unauthorized action", 403));
         }
 
-        const subject = await subjectModel.findOneAndUpdate(
-
-            { _id: id, "is_deleted.status": false },
+        const subject = await subjectModel.updateMany(
+            { _id: {$in: ids}, "is_deleted.status": false },
 
             {
-                $set:
-                {
+                $set: {
                     "is_deleted.status": true,
-                    "is_deleted.deleted_by": admin,
-                    "is_deleted.deleted_at": new Date()
+                    "is_deleted.deleted_by": adminID,
+                    "is_deleted.deleted_at": new Date(),
                 },
-
             },
 
             { new: true }
+        );
 
-        )
-
-        if (! subject) {
-
-            return next(new httpError("Subject not found or already deleted", 404));
-        }
+        if (subject.matchedCount === 0) {
+            return next(new httpError("No Subject found or already deleted", 404));
+          }
+      
 
         res.status(200).json({ 
-            message: `${subject.name} subject deleted successfully`,
+            message: "Subject deleted successfully",
             data: null,
             status: true,
             access_token: null
@@ -260,7 +257,7 @@ export const deleteSubject = async (req, res, next) => {
 
     } catch (error) {
 
-        return next(new httpError("Failed to delete subject. Please try again", 500));
+        return next(new httpError("Failed to delete Subject. Please try again later", 500));
     }
 
-}
+};

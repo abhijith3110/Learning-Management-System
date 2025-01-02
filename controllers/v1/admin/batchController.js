@@ -290,47 +290,49 @@ export const deleteBatch = async (req, res, next) => {
 
     try {
 
-        const { id } = req.params
-        const admin = req.user.id
+        const { ids } = req.body; 
 
-        if (! id) {
+        if (! ids || !Array.isArray(ids) || ids.length === 0) {
 
-            return next(new httpError("Batch ID required ", 400))
+            return next(new httpError("Batch ID is required", 400));
         }
 
-        const batch = await batchModel.findOneAndUpdate(
+        const adminID = req.user?.id
 
-            { _id: id, "is_deleted.status": false },
+        if (! adminID) {
+
+            return next(new httpError("Unauthorized action", 403));
+        }
+
+        const batch = await batchModel.updateMany(
+            { _id: {$in: ids}, "is_deleted.status": false },
 
             {
-                $set:
-                {
+                $set: {
                     "is_deleted.status": true,
-                    "is_deleted.deleted_by": admin,
-                    "is_deleted.deleted_at": new Date()
-                }
+                    "is_deleted.deleted_by": adminID,
+                    "is_deleted.deleted_at": new Date(),
+                },
             },
 
             { new: true }
-        )
+        );
 
-        if (! batch) {
+        if (batch.matchedCount === 0) {
+            return next(new httpError("No Batch found or already deleted", 404));
+          }
+      
 
-            return next(new httpError("Batch not found", 404))
-
-        } else {
-
-            res.status(200).json({
-                message: "Batch deleted successfully",
-                data: null,
-                status: true,
-                access_token: null
-            })
-        }
+        res.status(200).json({ 
+            message: "Batch deleted successfully",
+            data: null,
+            status: true,
+            access_token: null
+         });
 
     } catch (error) {
 
-        return next(new httpError("Failed to delete Batch. Please try again.", 500))
+        return next(new httpError("Failed to delete Batch. Please try again later", 500));
     }
 
-}
+};
