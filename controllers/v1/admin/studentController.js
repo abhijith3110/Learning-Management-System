@@ -151,6 +151,7 @@ export const listStudents = async (req, res, next) => {
         const startIndex = (page - 1) * limit
         const searchQuery = req.query.search || ''
         const statusFilter = req.query.status || ''
+        const BatchFilter = req.query.batch || ''
 
         const searchRegex = new RegExp(searchQuery, 'i')
 
@@ -166,6 +167,10 @@ export const listStudents = async (req, res, next) => {
         if (statusFilter) {
 
             filter.status = statusFilter;
+        }
+        if (BatchFilter) {
+
+            filter.batch = BatchFilter;
         }
 
         const total = await studentModel.countDocuments(filter)
