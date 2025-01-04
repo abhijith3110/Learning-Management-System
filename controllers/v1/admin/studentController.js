@@ -217,13 +217,48 @@ export const listStudents = async (req, res, next) => {
         })
 
     } catch (error) {
-        console.log(error);
 
         return next(new httpError("Failed to get Students list. Please try again later", 500));
 
     }
 
 }
+
+
+/** group all students */
+
+export const groupAllStudentsWithBatch = async (_req, res, next) => {
+    try {
+        const students = await studentModel.find({ "is_deleted.status": false })
+            .select('first_name last_name profile_image')
+            .populate({
+                path: 'batch',
+                select: 'name'
+            });
+
+        const groupedByBatch = students.reduce((acc, student) => {
+            const batchName = student.batch?.name || 'Unknown Batch';
+            if (!acc[batchName]) {
+                acc[batchName] = [];
+            }
+            acc[batchName].push(student);
+            return acc;
+        }, {});
+
+        res.status(200).json({
+            data: groupedByBatch,
+            message: '',
+            status: true,
+            access_token: null
+        });
+
+    } catch (error) {
+        
+        return next(new httpError("Failed to group Students. Please try again later", 500));
+    }
+};
+
+
 
 
 /** get One Student */
