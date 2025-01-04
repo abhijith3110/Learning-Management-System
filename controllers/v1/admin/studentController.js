@@ -234,7 +234,7 @@ export const groupAllStudentsWithBatch = async (_req, res, next) => {
             .populate({
                 path: 'batch',
                 select: 'name'
-            });
+            }).sort({ createdAt: -1 });
 
         const groupedByBatch = students.reduce((acc, student) => {
             const batchName = student.batch?.name || 'Unknown Batch';
