@@ -1,148 +1,147 @@
 import batchModel from "../../../models/batch.js";
 import teacherModel from "../../../models/teacher.js";
-import httpError from "../../../utils/httpError.js"
+import httpError from "../../../utils/httpError.js";
 
 /** Create Batch */
 
 export const createBatch = async (req, res, next) => {
+  try {
+    const { name, in_charge, type, status, duration } = req.body;
+    console.log(req.body);
 
-    try {
-
-        const { name, in_charge, type, status, duration } = req.body;
-
-        if (!name || !in_charge || !type || !status) {
-            return next(new httpError("All fields are mandatory", 400));
-        }
-
-        const existingBatch = await batchModel.findOne({ name });
-        if (existingBatch) {
-            return next(new httpError("This Batch Already exists", 409));
-        }
-
-        const isTeacherExist = await teacherModel.findOne({ _id: in_charge, "is_deleted.status": false });
-        if (!isTeacherExist) {
-            return next(new httpError("Teacher not Found", 404));
-        }
-
-        const batchDuration = duration || {};
-
-        if (status === "draft") {
-            batchDuration.from = null;
-            batchDuration.to = null;
-
-        } else {
-
-            if (!batchDuration.from || !batchDuration.to) {
-
-                return next(new httpError("Duration is required when status is not draft", 400));
-            }
-
-            const currentDate = new Date();
-            currentDate.setHours(0, 0, 0, 0);
-            const twoYearsLater = new Date();
-            twoYearsLater.setFullYear(currentDate.getFullYear() + 2);
-            twoYearsLater.setHours(0, 0, 0, 0);
-
-            const fromDate = new Date(batchDuration.from);
-            const toDate = new Date(batchDuration.to);
-
-            if (fromDate < currentDate) {
-                return next(new httpError("Cannot set a past date to add a course.", 404));
-            }
-
-            if (toDate > twoYearsLater) {
-                return next(new httpError("The duration cannot exceed 2 years.", 404));
-            }
-        }
-
-        const newBatch = new batchModel({ name, in_charge, type, status, duration: batchDuration });
-        await newBatch.save();
-
-        res.status(201).json({
-            message: "Batch created Successfully",
-            data: null,
-            status: true,
-            access_token: null,
-        });
-
-    } catch (error) {
-        console.log(error);
-        return next(new httpError("Failed to Create Batch. Please try again.", 500));
+    if (!name || !in_charge || !type || !status) {
+      return next(new httpError("All fields are mandatory", 400));
     }
+
+    const existingBatch = await batchModel.findOne({ name });
+
+    if (existingBatch) {
+      return next(new httpError("This Batch Already exists", 409));
+    }
+
+    const isTeacherExist = await teacherModel.findOne({
+      _id: in_charge,
+      "is_deleted.status": false,
+    });
+
+    if (!isTeacherExist) {
+      return next(new httpError("Teacher not Found", 404));
+    }
+
+    const batchDuration = duration || {};
+
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    const twoYearsLater = new Date();
+    twoYearsLater.setFullYear(currentDate.getFullYear() + 2);
+    twoYearsLater.setHours(0, 0, 0, 0);
+
+    const fromDate = new Date(batchDuration.from);
+    const toDate = new Date(batchDuration.to);
+
+    if (fromDate < currentDate) {
+      return next(
+        new httpError("Cannot set a past date to add a course.", 404)
+      );
+    }
+
+    if (toDate > twoYearsLater) {
+      return next(new httpError("The duration cannot exceed 2 years.", 404));
+    }
+
+    const newBatch = new batchModel({
+      name,
+      in_charge,
+      type,
+      status,
+      duration: batchDuration,
+    });
+    await newBatch.save();
+
+    res.status(201).json({
+      message: "Batch created Successfully",
+      data: null,
+      status: true,
+      access_token: null,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return next(
+      new httpError("Failed to Create Batch. Please try again.", 500)
+    );
+  }
 };
-
-
 
 /** List All Batches */
 
 export const listBatches = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit) || 5);
+    const startIndex = (page - 1) * limit;
 
-    try {
-     
-        const page = Math.max(1, parseInt(req.query.page) || 1); 
-        const limit = Math.max(1, parseInt(req.query.limit) || 5); 
-        const startIndex = (page - 1) * limit;
+    const searchQuery = req.query.search || "";
+    const filterStatus = req.query.status || "";
+    const filterType = req.query.type || "";
 
-        const searchQuery = req.query.search || '';
-        const filterStatus = req.query.status || '';
-        const filterType = req.query.type || '';
+    const searchRegex = new RegExp(searchQuery, "i");
 
-        const searchRegex = new RegExp(searchQuery, 'i');
+    const filter = {
+      "is_deleted.status": false,
+      $or: [{ name: { $regex: searchRegex } }],
+    };
 
-        const filter = {
-            "is_deleted.status": false,
-            $or: [{ name: { $regex: searchRegex } }],
-        };
-
-        if (filterStatus) {
-            filter.status = filterStatus;
-        }
-
-        if (filterType) {
-            filter.type = filterType;
-        }
-
-        const total = await batchModel.countDocuments(filter);
-
-        const batches = await batchModel.find(filter)
-            .select('-is_deleted')
-            .populate({
-                path: 'in_charge',
-                select: 'first_name last_name email status profile_image',
-                populate: {
-                    path: 'subject',
-                    select: 'name -_id',
-                },
-            })
-            .skip(startIndex)
-            .limit(limit)
-            .sort({ createdAt: -1 });
-
-        res.status(200).json({
-            data: batches,
-            message: '',
-            status: true,
-            access_token: null,
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-        });
-
-    } catch (error) {
-        
-        return next(new httpError("Failed to List All Batches. Please try again.", 500));
+    if (filterStatus) {
+      filter.status = filterStatus;
     }
-};
 
+    if (filterType) {
+      filter.type = filterType;
+    }
+
+    const total = await batchModel.countDocuments(filter);
+
+    const batches = await batchModel
+      .find(filter)
+      .select("-is_deleted")
+      .populate({
+        path: "in_charge",
+        select: "first_name last_name email status profile_image",
+        populate: {
+          path: "subject",
+          select: "name -_id",
+        },
+      })
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      data: batches,
+      message: "",
+      status: true,
+      access_token: null,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    return next(
+      new httpError("Failed to List All Batches. Please try again.", 500)
+    );
+  }
+};
 
 /** Name of all batches */
 
 export const listAllBatchesNames = async (req, res, next) => {
-
   try {
-    
-    const batches = await batchModel.find({"is_deleted.status": false,}).select('name').sort({ createdAt: -1 });
+    const batches = await batchModel
+      .find({ "is_deleted.status": false })
+      .select("name")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       data: batches,
@@ -157,190 +156,168 @@ export const listAllBatchesNames = async (req, res, next) => {
   }
 };
 
-
 /** Get One Batch */
 
 export const getOneBatch = async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-    try {
-
-        const { id } = req.params
-
-        if (!id) {
-
-            return next(new httpError("Batch ID required.", 400))
-        }
-
-
-        const batch = await batchModel.findOne({ _id: id })
-            .select('-is_deleted')
-            .populate({
-                path: 'in_charge',
-                select: ' first_name last_name email status profile_image',
-                populate: {
-                    path: 'subject',
-                    select: 'name'
-                }
-            })
-
-        if (! batch) {
-
-            return next(new httpError("Batch Not found.", 404))
-        }
-
-        res.status(200).json({
-            data: batch,
-            message: " ",
-            status: true,
-            access_token: null
-        });
-
-    } catch (error) {
-
-        return next(new httpError("Failed to get Batch. Please try again.", 500))
+    if (!id) {
+      return next(new httpError("Batch ID required.", 400));
     }
 
-}
+    const batch = await batchModel
+      .findOne({ _id: id })
+      .select("-is_deleted")
+      .populate({
+        path: "in_charge",
+        select: " first_name last_name email status profile_image",
+        populate: {
+          path: "subject",
+          select: "name",
+        },
+      });
 
+    if (!batch) {
+      return next(new httpError("Batch Not found.", 404));
+    }
+
+    res.status(200).json({
+      data: batch,
+      message: " ",
+      status: true,
+      access_token: null,
+    });
+  } catch (error) {
+    return next(new httpError("Failed to get Batch. Please try again.", 500));
+  }
+};
 
 /** Update Batch */
 
 export const updateBatch = async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-    try {
-        const { id } = req.params
-
-        if (! id) {
-
-            return next(new httpError("Batch ID required", 400))
-        }
-
-
-        const { name, in_charge, type, status, duration } = req.body
-
-        const existingBatch = await batchModel.findOne({ name, _id: { $ne: id } })
-
-        if (req.body.in_charge) {
-
-            const isTeacherExists = await teacherModel.findOne({ _id: in_charge, "is_deleted.status": false })
-
-            if (! isTeacherExists) {
-
-                return next(new httpError("Teacher Not found", 404))
-            }
-        }
-
-        if (existingBatch) {
-
-            return next(new httpError("This batch name is already exist", 400))
-        }
-
-        const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0);
-        const twoYearsLater = new Date();
-        twoYearsLater.setFullYear(currentDate.getFullYear() + 2);
-        twoYearsLater.setHours(0, 0, 0, 0);
-
-        if (duration.from) {
-
-            const fromDate = new Date(duration.from);
-
-            if (fromDate < currentDate) {
-
-                return next(new httpError("Cannot set a past date to add a course.", 404));
-            }
-
-        }
-
-        if (duration.to) {
-
-            const toDate = new Date(duration.to);
-
-            if (toDate > twoYearsLater) {
-
-                return next(new httpError("The duration cannot exceed 2 years.", 404));
-            }
-
-        }
-
-        const batchData = { name, in_charge, type, status }
-
-        const batch = await batchModel.findOneAndUpdate(
-            { _id: id },
-            { $set: batchData, "duration.from": duration.from, "duration.to": duration.to },
-            { new: true, runValidators: true })
-
-        if (batch) {
-
-            res.status(200).json({
-                message: "Batch Updated Successfully ",
-                data: null,
-                status: true,
-                access_token: null
-            })
-
-        } else {
-
-            return next(new httpError("batch not found.", 404))
-        }
-
-    } catch (error) {
-
-        return next(new httpError("Failed to Update Batch. Please try again.", 500))
+    if (!id) {
+      return next(new httpError("Batch ID required", 400));
     }
 
-}
+    const { name, in_charge, type, status, duration } = req.body;
 
+    const existingBatch = await batchModel.findOne({ name, _id: { $ne: id } });
+
+    if (req.body.in_charge) {
+      const isTeacherExists = await teacherModel.findOne({
+        _id: in_charge,
+        "is_deleted.status": false,
+      });
+
+      if (!isTeacherExists) {
+        return next(new httpError("Teacher Not found", 404));
+      }
+    }
+
+    if (existingBatch) {
+      return next(new httpError("This batch name is already exist", 400));
+    }
+
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    const twoYearsLater = new Date();
+    twoYearsLater.setFullYear(currentDate.getFullYear() + 2);
+    twoYearsLater.setHours(0, 0, 0, 0);
+
+    if (duration.from) {
+      const fromDate = new Date(duration.from);
+
+      if (fromDate < currentDate) {
+        return next(
+          new httpError("Cannot set a past date to add a course.", 404)
+        );
+      }
+    }
+
+    if (duration.to) {
+      const toDate = new Date(duration.to);
+
+      if (toDate > twoYearsLater) {
+        return next(new httpError("The duration cannot exceed 2 years.", 404));
+      }
+    }
+
+    const batchData = { name, in_charge, type, status };
+
+    const batch = await batchModel.findOneAndUpdate(
+      { _id: id },
+      {
+        $set: batchData,
+        "duration.from": duration.from,
+        "duration.to": duration.to,
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (batch) {
+      res.status(200).json({
+        message: "Batch Updated Successfully ",
+        data: null,
+        status: true,
+        access_token: null,
+      });
+    } else {
+      return next(new httpError("batch not found.", 404));
+    }
+  } catch (error) {
+    return next(
+      new httpError("Failed to Update Batch. Please try again.", 500)
+    );
+  }
+};
 
 /** Delete batch */
 
 export const deleteBatch = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
 
-    try {
-
-        const { ids } = req.body; 
-
-        if (! ids || !Array.isArray(ids) || ids.length === 0) {
-
-            return next(new httpError("Batch ID is required", 400));
-        }
-
-        const adminID = req.user?.id
-
-        if (! adminID) {
-
-            return next(new httpError("Unauthorized action", 403));
-        }
-
-        const batch = await batchModel.updateMany(
-            { _id: {$in: ids}, "is_deleted.status": false },
-
-            {
-                $set: {
-                    "is_deleted.status": true,
-                    "is_deleted.deleted_by": adminID,
-                    "is_deleted.deleted_at": new Date(),
-                },
-            },
-
-            { new: true }
-        );
-
-        if (batch.matchedCount === 0) {
-            return next(new httpError("No Batch found or already deleted", 404));
-          }
-      
-
-        res.status(200).json({ 
-            message: "Batch deleted successfully",
-            data: null,
-            status: true,
-            access_token: null
-         });
-
-    } catch (error) {
-
-        return next(new httpError("Failed to delete Batch. Please try again later", 500));
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return next(new httpError("Batch ID is required", 400));
     }
 
+    const adminID = req.user?.id;
+
+    if (!adminID) {
+      return next(new httpError("Unauthorized action", 403));
+    }
+
+    const batch = await batchModel.updateMany(
+      { _id: { $in: ids }, "is_deleted.status": false },
+
+      {
+        $set: {
+          "is_deleted.status": true,
+          "is_deleted.deleted_by": adminID,
+          "is_deleted.deleted_at": new Date(),
+        },
+      },
+
+      { new: true }
+    );
+
+    if (batch.matchedCount === 0) {
+      return next(new httpError("No Batch found or already deleted", 404));
+    }
+
+    res.status(200).json({
+      message: "Batch deleted successfully",
+      data: null,
+      status: true,
+      access_token: null,
+    });
+  } catch (error) {
+    return next(
+      new httpError("Failed to delete Batch. Please try again later", 500)
+    );
+  }
 };

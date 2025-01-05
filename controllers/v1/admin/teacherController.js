@@ -195,10 +195,13 @@ export const listTeachers = async (req, res, next) => {
 /** get One teacher */
 
 export const getOneTeacher = async (req, res, next) => {
+
   try {
+
     const { id } = req.params;
 
     if (!id) {
+
       return next(new httpError("Teacher ID required", 400));
     }
 
@@ -222,6 +225,7 @@ export const getOneTeacher = async (req, res, next) => {
       });
 
     if (!teacher) {
+
       return next(new httpError("Teacher Not Found", 404));
     }
 
@@ -231,12 +235,40 @@ export const getOneTeacher = async (req, res, next) => {
       status: true,
       access_token: null,
     });
-  } catch (error) {
-    return next(
-      new httpError("Failed to get teacher . Please try again later", 500)
-    );
+
+  } catch (error) { 
+
+    return next(new httpError("Failed to get teacher . Please try again later", 500));
   }
+
 };
+
+
+/** List All Teacher Name */
+
+
+export const ListAllTeacherNames = async (_req, res, next) => {
+
+  try {
+
+    const teacher = await teacherModel.find({ "is_deleted.status": false }).select('first_name last_name');
+
+    res.status(200).json({
+      message:"",
+      data:teacher,
+      status:true,
+      access_token:null
+
+    })
+    
+  } catch (error) {
+
+    return next (new httpError("Failed to get all teacheres Names . Please try again later", 500))
+  }
+
+}
+
+
 
 /** Update Teacher  */
 

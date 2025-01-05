@@ -29,14 +29,12 @@ const batchSchema = new mongoose.Schema({
 
             from: { 
               type: Date, 
-              required: false,  
-              default: null    
+              required: true,  
             },
 
             to: { 
               type: Date, 
-              required: false,  
-              default: null     
+              required: true     
             }
 
           },
