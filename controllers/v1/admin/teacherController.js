@@ -10,7 +10,7 @@ export const createTeacher = async (req, res, next) => {
   try {
 
     const { first_name, last_name, email, password, address, gender, dob, phone, subject } = req.body;
-
+    
     let profile_image;
 
     if (req.file && req.file.path) {
@@ -45,8 +45,7 @@ export const createTeacher = async (req, res, next) => {
       return next( new httpError( "A teacher with this email or this Phone Number is already exists", 404 ));
     }
 
-    const subjectArray = Array.isArray(subject) ? subject : [subject];
-
+    const subjectArray = Array.isArray(subject) ? subject : subject.split(",");
 
     const subjectData = await subjectModel.find({ 
         $and: [
@@ -120,6 +119,7 @@ export const createTeacher = async (req, res, next) => {
       const errorMessage = Object.values(error.errors).map((err) => err.message);
       return next(new httpError(errorMessage.join(","), 400));
     }
+console.log(error);
 
     return next(new httpError("Failed to Upload Teacher Data. Please try again later",500));
   }

@@ -136,7 +136,7 @@ export const listBatches = async (req, res, next) => {
 
 /** Name of all batches */
 
-export const listAllBatchesNames = async (req, res, next) => {
+export const listAllBatchesNames = async (_req, res, next) => {
   try {
     const batches = await batchModel
       .find({ "is_deleted.status": false })

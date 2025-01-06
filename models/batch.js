@@ -21,7 +21,7 @@ const batchSchema = new mongoose.Schema({
 
         status: {
             type: String,
-            enum: ['draft', 'inprogress', 'completed'],
+            enum: ['draft', 'inprogress', 'completed', 'about-to-start'],
             required: true
         },
 
